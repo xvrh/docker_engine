@@ -1826,6 +1826,135 @@ class Docker {
   }
 }
 
+class LocalNodeState {
+  static const $empty = LocalNodeState._('');
+  static const inactive = LocalNodeState._('inactive');
+  static const pending = LocalNodeState._('pending');
+  static const active = LocalNodeState._('active');
+  static const error = LocalNodeState._('error');
+  static const locked = LocalNodeState._('locked');
+
+  static const values = [
+    $empty,
+    inactive,
+    pending,
+    active,
+    error,
+    locked,
+  ];
+  final String value;
+
+  const LocalNodeState._(this.value);
+
+  static LocalNodeState fromValue(String value) =>
+      values.firstWhere((e) => e.value == value,
+          orElse: () => LocalNodeState._(value));
+
+  /// An enum received from the server but this version of the client doesn't recognize it.
+  bool get isUnknown => values.every((v) => v.value != value);
+
+  @override
+  String toString() => value;
+}
+
+class NodeState {
+  static const unknown = NodeState._('unknown');
+  static const down = NodeState._('down');
+  static const ready = NodeState._('ready');
+  static const disconnected = NodeState._('disconnected');
+
+  static const values = [
+    unknown,
+    down,
+    ready,
+    disconnected,
+  ];
+  final String value;
+
+  const NodeState._(this.value);
+
+  static NodeState fromValue(String value) => values
+      .firstWhere((e) => e.value == value, orElse: () => NodeState._(value));
+
+  /// An enum received from the server but this version of the client doesn't recognize it.
+  bool get isUnknown => values.every((v) => v.value != value);
+
+  @override
+  String toString() => value;
+}
+
+class Reachability {
+  static const unknown = Reachability._('unknown');
+  static const unreachable = Reachability._('unreachable');
+  static const reachable = Reachability._('reachable');
+
+  static const values = [
+    unknown,
+    unreachable,
+    reachable,
+  ];
+  final String value;
+
+  const Reachability._(this.value);
+
+  static Reachability fromValue(String value) => values
+      .firstWhere((e) => e.value == value, orElse: () => Reachability._(value));
+
+  /// An enum received from the server but this version of the client doesn't recognize it.
+  bool get isUnknown => values.every((v) => v.value != value);
+
+  @override
+  String toString() => value;
+}
+
+class TaskState {
+  static const new$ = TaskState._('new');
+  static const allocated = TaskState._('allocated');
+  static const pending = TaskState._('pending');
+  static const assigned = TaskState._('assigned');
+  static const accepted = TaskState._('accepted');
+  static const preparing = TaskState._('preparing');
+  static const ready = TaskState._('ready');
+  static const starting = TaskState._('starting');
+  static const running = TaskState._('running');
+  static const complete = TaskState._('complete');
+  static const shutdown = TaskState._('shutdown');
+  static const failed = TaskState._('failed');
+  static const rejected = TaskState._('rejected');
+  static const remove = TaskState._('remove');
+  static const orphaned = TaskState._('orphaned');
+
+  static const values = [
+    new$,
+    allocated,
+    pending,
+    assigned,
+    accepted,
+    preparing,
+    ready,
+    starting,
+    running,
+    complete,
+    shutdown,
+    failed,
+    rejected,
+    remove,
+    orphaned,
+  ];
+  final String value;
+
+  const TaskState._(this.value);
+
+  static TaskState fromValue(String value) => values
+      .firstWhere((e) => e.value == value, orElse: () => TaskState._(value));
+
+  /// An enum received from the server but this version of the client doesn't recognize it.
+  bool get isUnknown => values.every((v) => v.value != value);
+
+  @override
+  String toString() => value;
+}
+
 /// Address represents an IPv4 or IPv6 IP address.
 class Address {
   /// IP address.
@@ -5052,20 +5181,6 @@ class Limit {
   }
 }
 
-/// Current local status of this node.
-class LocalNodeState {
-  LocalNodeState();
-
-  factory LocalNodeState.fromJson(Map<String, Object?> json) {
-    return LocalNodeState();
-  }
-
-  Map<String, Object?> toJson() {
-    final json = <String, Object?>{};
-    return json;
-  }
-}
-
 /// ManagerStatus represents the status of a manager.
 ///
 /// It provides the current status of a node's manager component, if the node
@@ -5084,8 +5199,7 @@ class ManagerStatus {
     return ManagerStatus(
       leader: json[r'Leader'] as bool? ?? false,
       reachability: json[r'Reachability'] != null
-          ? Reachability.fromJson(
-              json[r'Reachability']! as Map<String, Object?>)
+          ? Reachability.fromValue(json[r'Reachability']! as String)
           : null,
       addr: json[r'Addr'] as String?,
     );
@@ -5099,7 +5213,7 @@ class ManagerStatus {
     final json = <String, Object?>{};
     json[r'Leader'] = leader;
     if (reachability != null) {
-      json[r'Reachability'] = reachability.toJson();
+      json[r'Reachability'] = reachability.value;
     }
     if (addr != null) {
       json[r'Addr'] = addr;
@@ -6455,20 +6569,6 @@ class NodeSpecAvailability {
   String toString() => value;
 }
 
-/// NodeState represents the state of a node.
-class NodeState {
-  NodeState();
-
-  factory NodeState.fromJson(Map<String, Object?> json) {
-    return NodeState();
-  }
-
-  Map<String, Object?> toJson() {
-    final json = <String, Object?>{};
-    return json;
-  }
-}
-
 /// NodeStatus represents the status of a node.
 ///
 /// It provides the current status of the node, as seen by the manager.
@@ -6484,7 +6584,7 @@ class NodeStatus {
   factory NodeStatus.fromJson(Map<String, Object?> json) {
     return NodeStatus(
       state: json[r'State'] != null
-          ? NodeState.fromJson(json[r'State']! as Map<String, Object?>)
+          ? NodeState.fromValue(json[r'State']! as String)
           : null,
       message: json[r'Message'] as String?,
       addr: json[r'Addr'] as String?,
@@ -6498,7 +6598,7 @@ class NodeStatus {
 
     final json = <String, Object?>{};
     if (state != null) {
-      json[r'State'] = state.toJson();
+      json[r'State'] = state.value;
     }
     if (message != null) {
       json[r'Message'] = message;
@@ -7811,20 +7911,6 @@ class PushImageInfo {
       progress: progress ?? this.progress,
       progressDetail: progressDetail ?? this.progressDetail,
     );
-  }
-}
-
-/// Reachability represents the reachability of a node.
-class Reachability {
-  Reachability();
-
-  factory Reachability.fromJson(Map<String, Object?> json) {
-    return Reachability();
-  }
-
-  Map<String, Object?> toJson() {
-    final json = <String, Object?>{};
-    return json;
   }
 }
 
@@ -9893,8 +9979,7 @@ class SwarmInfo {
       nodeId: json[r'NodeID'] as String?,
       nodeAddr: json[r'NodeAddr'] as String?,
       localNodeState: json[r'LocalNodeState'] != null
-          ? LocalNodeState.fromJson(
-              json[r'LocalNodeState']! as Map<String, Object?>)
+          ? LocalNodeState.fromValue(json[r'LocalNodeState']! as String)
           : null,
       controlAvailable: json[r'ControlAvailable'] as bool? ?? false,
       error: json[r'Error'] as String?,
@@ -9930,7 +10015,7 @@ class SwarmInfo {
       json[r'NodeAddr'] = nodeAddr;
     }
     if (localNodeState != null) {
-      json[r'LocalNodeState'] = localNodeState.toJson();
+      json[r'LocalNodeState'] = localNodeState.value;
     }
     json[r'ControlAvailable'] = controlAvailable;
     if (error != null) {
@@ -11887,7 +11972,7 @@ class Task {
           ? TaskStatus.fromJson(json[r'Status']! as Map<String, Object?>)
           : null,
       desiredState: json[r'DesiredState'] != null
-          ? TaskState.fromJson(json[r'DesiredState']! as Map<String, Object?>)
+          ? TaskState.fromValue(json[r'DesiredState']! as String)
           : null,
       jobIteration: json[r'JobIteration'] != null
           ? ObjectVersion.fromJson(
@@ -11949,7 +12034,7 @@ class Task {
       json[r'Status'] = status.toJson();
     }
     if (desiredState != null) {
-      json[r'DesiredState'] = desiredState.toJson();
+      json[r'DesiredState'] = desiredState.value;
     }
     if (jobIteration != null) {
       json[r'JobIteration'] = jobIteration.toJson();
@@ -13653,19 +13738,6 @@ class TaskSpecRestartPolicyCondition {
   String toString() => value;
 }
 
-class TaskState {
-  TaskState();
-
-  factory TaskState.fromJson(Map<String, Object?> json) {
-    return TaskState();
-  }
-
-  Map<String, Object?> toJson() {
-    final json = <String, Object?>{};
-    return json;
-  }
-}
-
 class TaskStatus {
   final DateTime? timestamp;
   final TaskState? state;
@@ -13684,7 +13756,7 @@ class TaskStatus {
     return TaskStatus(
       timestamp: DateTime.tryParse(json[r'Timestamp'] as String? ?? ''),
       state: json[r'State'] != null
-          ? TaskState.fromJson(json[r'State']! as Map<String, Object?>)
+          ? TaskState.fromValue(json[r'State']! as String)
           : null,
       message: json[r'Message'] as String?,
       err: json[r'Err'] as String?,
@@ -13707,7 +13779,7 @@ class TaskStatus {
       json[r'Timestamp'] = timestamp.toIso8601String();
     }
     if (state != null) {
-      json[r'State'] = state.toJson();
+      json[r'State'] = state.value;
     }
     if (message != null) {
       json[r'Message'] = message;

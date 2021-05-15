@@ -1,10 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:dart_style/dart_style.dart';
+import 'package:yaml/yaml.dart';
 import 'swagger/dart.dart' as dart;
 import 'swagger/swagger_spec.dart';
 import 'update_swagger_file.dart' show swaggerPath;
-import 'package:yaml/yaml.dart';
 
 void main() {
   var yamlSpec = loadYaml(File(swaggerPath).readAsStringSync());

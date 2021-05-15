@@ -36,12 +36,23 @@ class Api {
       }
     }
 
+    // Search for top-level enum first
+    for (var definition in _spec.definitions.entries) {
+      var schema = definition.value;
+      if (schema.enums != null) {
+        var enumName = definition.key;
+        _topLevelEnums[enumName] = EnumDartType(this, null, enumName, schema);
+      }
+    }
+
     for (var definitionEntry in _spec.definitions.entries) {
       var definitionName = definitionEntry.key;
       var definition = definitionEntry.value;
 
-      _complexTypes.add(
-          ComplexType(this, _typeNameToDartType(definitionName), definition));
+      if (definition.type != 'string') {
+        _complexTypes.add(
+            ComplexType(this, _typeNameToDartType(definitionName), definition));
+      }
     }
   }
 
@@ -277,18 +288,6 @@ class Operation {
     }
 
     //TODO(xha): get the error case to document exceptions
-    //var response = path.responses.entries
-    //    .where((s) => s.key.startsWith('2') || s.key.startsWith('3'))
-    //    .toList();
-    //if (responses.isEmpty) {
-    //  throw Exception(
-    //      'No status code 2xx found for $methodName / ${_api.name}');
-    //} else if (responses.length > 1) {
-    //  //TODO(xha): support a way to give the user the status code to know if the
-    //  // the resource was created or updated (200 or 201)
-    //  //throw Exception(
-    //  //    'Several ${responses.map((p) => p.key)} ${path.operationId} ${_api.name}');
-    //}
     var response = (path.responses.entries
                 .firstWhereOrNull((s) => s.key.startsWith('2')) ??
             path.responses.entries

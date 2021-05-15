@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart';
 import 'package:path/path.dart' as p;
-
 import 'http_unix_client.dart';
 
 class ApiClient {
