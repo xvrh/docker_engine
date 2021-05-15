@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart';
 import 'package:path/path.dart' as p;
 import 'http_unix_client.dart';
@@ -8,7 +9,10 @@ class ApiClient {
   final String basePath;
 
   ApiClient({String? socketPath, required this.basePath})
-      : _client = HttpUnixClient(socketPath ?? '/var/run/docker.sock');
+      : _client = HttpUnixClient(socketPath ??
+            (Platform.isWindows
+                ? '//./pipe/docker_engine'
+                : '/var/run/docker.sock'));
 
   Future<T> send<T>(
     String method,
