@@ -1,0 +1,20 @@
+name: docker_engine
+description: A client for the Docker Engine API. Everything the Docker CLI can do can be done with the API.
+version: 1.0.0
+# homepage: https://www.example.com
+
+environment:
+  sdk: '>=2.12.0 <3.0.0'
+
+dependencies:
+  http:
+  path: ^1.8.0
+
+dev_dependencies:
+  analyzer:
+  build_runner:
+  dart_style:
+  json_annotation:
+  json_serializable:
+  pedantic: ^1.10.0
+  test: ^1.16.0
