@@ -117,6 +117,7 @@ class Docker {
         .toList();
   }
 
+  /// Create a container
   Future<Map<String, dynamic>> containerCreate(
       {String? name, required ContainerConfig body}) async {
     return await _client.send(
@@ -125,6 +126,7 @@ class Docker {
       queryParameters: {
         if (name != null) 'name': name,
       },
+      body: body.toJson(),
     ) as Map<String, Object?>;
   }
 
@@ -276,9 +278,11 @@ class Docker {
         if (h != null) 'h': '$h',
         if (w != null) 'w': '$w',
       },
+      isPlainText: true,
     );
   }
 
+  /// Start a container
   Future<void> containerStart({required String id, String? detachKeys}) async {
     await _client.send(
       'post',
@@ -292,6 +296,7 @@ class Docker {
     );
   }
 
+  /// Stop a container
   Future<void> containerStop({required String id, int? t}) async {
     await _client.send(
       'post',
@@ -305,6 +310,7 @@ class Docker {
     );
   }
 
+  /// Restart a container
   Future<void> containerRestart({required String id, int? t}) async {
     await _client.send(
       'post',
@@ -343,9 +349,11 @@ class Docker {
       pathParameters: {
         'id': id,
       },
+      body: update.toJson(),
     ) as Map<String, Object?>;
   }
 
+  /// Rename a container
   Future<void> containerRename(
       {required String id, required String name}) async {
     await _client.send(
@@ -508,6 +516,7 @@ class Docker {
     );
   }
 
+  /// Attach to a container via a websocket
   Future<void> containerAttachWebsocket(
       {required String id,
       String? detachKeys,
@@ -548,6 +557,7 @@ class Docker {
     ) as Map<String, Object?>;
   }
 
+  /// Remove a container
   Future<void> containerDelete(
       {required String id, bool? v, bool? force, bool? link}) async {
     await _client.send(
@@ -616,9 +626,11 @@ class Docker {
           'noOverwriteDirNonDir': noOverwriteDirNonDir,
         if (copyUidgid != null) 'copyUIDGID': copyUidgid,
       },
+      body: inputStream,
     );
   }
 
+  /// Delete stopped containers
   Future<Map<String, dynamic>> containerPrune({String? filters}) async {
     return await _client.send(
       'post',
@@ -719,12 +731,14 @@ class Docker {
         if (outputs != null) 'outputs': outputs,
       },
       headers: {
-        'Content-type': 'null',
-        'X-Registry-Config': 'null',
+        'Content-type': contentType ?? 'application/x-tar',
+        if (xRegistryConfig != null) 'X-Registry-Config': xRegistryConfig,
       },
+      body: inputStream,
     );
   }
 
+  /// Delete builder cache
   Future<Map<String, dynamic>> buildPrune(
       {int? keepStorage, bool? all, String? filters}) async {
     return await _client.send(
@@ -760,8 +774,9 @@ class Docker {
         if (platform != null) 'platform': platform,
       },
       headers: {
-        'X-Registry-Auth': 'null',
+        if (xRegistryAuth != null) 'X-Registry-Auth': xRegistryAuth,
       },
+      body: inputImage,
     );
   }
 
@@ -810,7 +825,7 @@ class Docker {
         if (tag != null) 'tag': tag,
       },
       headers: {
-        'X-Registry-Auth': 'null',
+        'X-Registry-Auth': xRegistryAuth,
       },
     );
   }
@@ -870,6 +885,7 @@ class Docker {
         .toList();
   }
 
+  /// Delete unused images
   Future<Map<String, dynamic>> imagePrune({String? filters}) async {
     return await _client.send(
       'post',
@@ -886,9 +902,11 @@ class Docker {
     return await _client.send(
       'post',
       'auth',
+      body: authConfig != null ? authConfig.toJson() : null,
     ) as Map<String, Object?>;
   }
 
+  /// Get system information
   Future<SystemInfo> systemInfo() async {
     return SystemInfo.fromJson(await _client.send(
       'get',
@@ -910,17 +928,20 @@ class Docker {
     return await _client.send(
       'get',
       '_ping',
+      isPlainText: true,
     ) as String;
   }
 
   /// This is a dummy endpoint you can use to test if the server is accessible.
-  Future<String> systemPingHead() async {
-    return await _client.send(
+  Future<void> systemPingHead() async {
+    await _client.send(
       'head',
       '_ping',
-    ) as String;
+      isPlainText: true,
+    );
   }
 
+  /// Create a new image from a container
   Future<IdResponse> imageCommit(
       {ContainerConfig? containerConfig,
       String? container,
@@ -942,6 +963,7 @@ class Docker {
         if (pause != null) 'pause': '$pause',
         if (changes != null) 'changes': changes,
       },
+      body: containerConfig != null ? containerConfig.toJson() : null,
     ));
   }
 
@@ -989,6 +1011,7 @@ class Docker {
     ) as Map<String, Object?>;
   }
 
+  /// Get data usage information
   Future<Map<String, dynamic>> systemDataUsage() async {
     return await _client.send(
       'get',
@@ -1071,6 +1094,7 @@ class Docker {
       queryParameters: {
         if (quiet != null) 'quiet': '$quiet',
       },
+      body: imagesTarball,
     );
   }
 
@@ -1083,6 +1107,7 @@ class Docker {
       pathParameters: {
         'id': id,
       },
+      body: execConfig,
     ));
   }
 
@@ -1097,6 +1122,7 @@ class Docker {
       pathParameters: {
         'id': id,
       },
+      body: execStartConfig,
     );
   }
 
@@ -1127,6 +1153,7 @@ class Docker {
     ) as Map<String, Object?>;
   }
 
+  /// List volumes
   Future<Map<String, dynamic>> volumeList({String? filters}) async {
     return await _client.send(
       'get',
@@ -1137,13 +1164,17 @@ class Docker {
     ) as Map<String, Object?>;
   }
 
-  Future<Volume> volumeCreate(Map<String, dynamic> volumeConfig) async {
+  /// Create a volume
+  Future<Volume> volumeCreate(
+      {required Map<String, dynamic> volumeConfig}) async {
     return Volume.fromJson(await _client.send(
       'post',
       'volumes/create',
+      body: volumeConfig,
     ));
   }
 
+  /// Inspect a volume
   Future<Volume> volumeInspect(String name) async {
     return Volume.fromJson(await _client.send(
       'get',
@@ -1168,6 +1199,7 @@ class Docker {
     );
   }
 
+  /// Delete unused volumes
   Future<Map<String, dynamic>> volumePrune({String? filters}) async {
     return await _client.send(
       'post',
@@ -1196,6 +1228,7 @@ class Docker {
         .toList();
   }
 
+  /// Inspect a network
   Future<Network> networkInspect(
       {required String id, bool? verbose, String? scope}) async {
     return Network.fromJson(await _client.send(
@@ -1211,6 +1244,7 @@ class Docker {
     ));
   }
 
+  /// Remove a network
   Future<void> networkDelete(String id) async {
     await _client.send(
       'delete',
@@ -1221,14 +1255,17 @@ class Docker {
     );
   }
 
+  /// Create a network
   Future<Map<String, dynamic>> networkCreate(
-      Map<String, dynamic> networkConfig) async {
+      {required Map<String, dynamic> networkConfig}) async {
     return await _client.send(
       'post',
       'networks/create',
+      body: networkConfig,
     ) as Map<String, Object?>;
   }
 
+  /// Connect a container to a network
   Future<void> networkConnect(
       {required String id, required Map<String, dynamic> container}) async {
     await _client.send(
@@ -1237,9 +1274,11 @@ class Docker {
       pathParameters: {
         'id': id,
       },
+      body: container,
     );
   }
 
+  /// Disconnect a container from a network
   Future<void> networkDisconnect(
       {required String id, required Map<String, dynamic> container}) async {
     await _client.send(
@@ -1248,9 +1287,11 @@ class Docker {
       pathParameters: {
         'id': id,
       },
+      body: container,
     );
   }
 
+  /// Delete unused networks
   Future<Map<String, dynamic>> networkPrune({String? filters}) async {
     return await _client.send(
       'post',
@@ -1274,6 +1315,7 @@ class Docker {
         .toList();
   }
 
+  /// Get plugin privileges
   Future<List<Map<String, dynamic>>> getPluginPrivileges(String remote) async {
     return (await _client.send(
       'get',
@@ -1302,11 +1344,13 @@ class Docker {
         if (name != null) 'name': name,
       },
       headers: {
-        'X-Registry-Auth': 'null',
+        if (xRegistryAuth != null) 'X-Registry-Auth': xRegistryAuth,
       },
+      body: body,
     );
   }
 
+  /// Inspect a plugin
   Future<Plugin> pluginInspect(String name) async {
     return Plugin.fromJson(await _client.send(
       'get',
@@ -1317,6 +1361,7 @@ class Docker {
     ));
   }
 
+  /// Remove a plugin
   Future<Plugin> pluginDelete({required String name, bool? force}) async {
     return Plugin.fromJson(await _client.send(
       'delete',
@@ -1330,6 +1375,7 @@ class Docker {
     ));
   }
 
+  /// Enable a plugin
   Future<void> pluginEnable({required String name, int? timeout}) async {
     await _client.send(
       'post',
@@ -1343,6 +1389,7 @@ class Docker {
     );
   }
 
+  /// Disable a plugin
   Future<void> pluginDisable(String name) async {
     await _client.send(
       'post',
@@ -1353,6 +1400,7 @@ class Docker {
     );
   }
 
+  /// Upgrade a plugin
   Future<void> pluginUpgrade(
       {required String name,
       required String remote,
@@ -1368,11 +1416,13 @@ class Docker {
         'remote': remote,
       },
       headers: {
-        'X-Registry-Auth': 'null',
+        if (xRegistryAuth != null) 'X-Registry-Auth': xRegistryAuth,
       },
+      body: body,
     );
   }
 
+  /// Create a plugin
   Future<void> pluginCreate({required String name, String? tarContext}) async {
     await _client.send(
       'post',
@@ -1380,6 +1430,7 @@ class Docker {
       queryParameters: {
         'name': name,
       },
+      body: tarContext,
     );
   }
 
@@ -1394,6 +1445,7 @@ class Docker {
     );
   }
 
+  /// Configure a plugin
   Future<void> pluginSet({required String name, List<String>? body}) async {
     await _client.send(
       'post',
@@ -1401,9 +1453,11 @@ class Docker {
       pathParameters: {
         'name': name,
       },
+      body: body,
     );
   }
 
+  /// List nodes
   Future<List<Node>> nodeList({String? filters}) async {
     return (await _client.send(
       'get',
@@ -1416,6 +1470,7 @@ class Docker {
         .toList();
   }
 
+  /// Inspect a node
   Future<Node> nodeInspect(String id) async {
     return Node.fromJson(await _client.send(
       'get',
@@ -1426,6 +1481,7 @@ class Docker {
     ));
   }
 
+  /// Delete a node
   Future<void> nodeDelete({required String id, bool? force}) async {
     await _client.send(
       'delete',
@@ -1439,6 +1495,7 @@ class Docker {
     );
   }
 
+  /// Update a node
   Future<void> nodeUpdate(
       {required String id, NodeSpec? body, required int version}) async {
     await _client.send(
@@ -1450,9 +1507,11 @@ class Docker {
       queryParameters: {
         'version': '$version',
       },
+      body: body != null ? body.toJson() : null,
     );
   }
 
+  /// Inspect swarm
   Future<Swarm> swarmInspect() async {
     return Swarm.fromJson(await _client.send(
       'get',
@@ -1460,20 +1519,25 @@ class Docker {
     ));
   }
 
-  Future<String> swarmInit(Map<String, dynamic> body) async {
+  /// Initialize a new swarm
+  Future<String> swarmInit({required Map<String, dynamic> body}) async {
     return await _client.send(
       'post',
       'swarm/init',
+      body: body,
     ) as String;
   }
 
-  Future<void> swarmJoin(Map<String, dynamic> body) async {
+  /// Join an existing swarm
+  Future<void> swarmJoin({required Map<String, dynamic> body}) async {
     await _client.send(
       'post',
       'swarm/join',
+      body: body,
     );
   }
 
+  /// Leave a swarm
   Future<void> swarmLeave({bool? force}) async {
     await _client.send(
       'post',
@@ -1484,6 +1548,7 @@ class Docker {
     );
   }
 
+  /// Update a swarm
   Future<void> swarmUpdate(
       {required SwarmSpec body,
       required int version,
@@ -1502,9 +1567,11 @@ class Docker {
         if (rotateManagerUnlockKey != null)
           'rotateManagerUnlockKey': '$rotateManagerUnlockKey',
       },
+      body: body.toJson(),
     );
   }
 
+  /// Get the unlock key
   Future<Map<String, dynamic>> swarmUnlockkey() async {
     return await _client.send(
       'get',
@@ -1512,13 +1579,16 @@ class Docker {
     ) as Map<String, Object?>;
   }
 
-  Future<void> swarmUnlock(Map<String, dynamic> body) async {
+  /// Unlock a locked manager
+  Future<void> swarmUnlock({required Map<String, dynamic> body}) async {
     await _client.send(
       'post',
       'swarm/unlock',
+      body: body,
     );
   }
 
+  /// List services
   Future<List<Service>> serviceList({String? filters, bool? status}) async {
     return (await _client.send(
       'get',
@@ -1532,17 +1602,20 @@ class Docker {
         .toList();
   }
 
+  /// Create a service
   Future<Map<String, dynamic>> serviceCreate(
       {required ServiceSpec body, String? xRegistryAuth}) async {
     return await _client.send(
       'post',
       'services/create',
       headers: {
-        'X-Registry-Auth': 'null',
+        if (xRegistryAuth != null) 'X-Registry-Auth': xRegistryAuth,
       },
+      body: body.toJson(),
     ) as Map<String, Object?>;
   }
 
+  /// Inspect a service
   Future<Service> serviceInspect(
       {required String id, bool? insertDefaults}) async {
     return Service.fromJson(await _client.send(
@@ -1557,6 +1630,7 @@ class Docker {
     ));
   }
 
+  /// Delete a service
   Future<void> serviceDelete(String id) async {
     await _client.send(
       'delete',
@@ -1567,6 +1641,7 @@ class Docker {
     );
   }
 
+  /// Update a service
   Future<ServiceUpdateResponse> serviceUpdate(
       {required String id,
       required ServiceSpec body,
@@ -1586,8 +1661,9 @@ class Docker {
         if (rollback != null) 'rollback': rollback,
       },
       headers: {
-        'X-Registry-Auth': 'null',
+        if (xRegistryAuth != null) 'X-Registry-Auth': xRegistryAuth,
       },
+      body: body.toJson(),
     ));
   }
 
@@ -1623,6 +1699,7 @@ class Docker {
     ) as String;
   }
 
+  /// List tasks
   Future<List<Task>> taskList({String? filters}) async {
     return (await _client.send(
       'get',
@@ -1635,6 +1712,7 @@ class Docker {
         .toList();
   }
 
+  /// Inspect a task
   Future<Task> taskInspect(String id) async {
     return Task.fromJson(await _client.send(
       'get',
@@ -1677,6 +1755,7 @@ class Docker {
     ) as String;
   }
 
+  /// List secrets
   Future<List<Secret>> secretList({String? filters}) async {
     return (await _client.send(
       'get',
@@ -1689,13 +1768,16 @@ class Docker {
         .toList();
   }
 
+  /// Create a secret
   Future<IdResponse> secretCreate({SecretSpec? body}) async {
     return IdResponse.fromJson(await _client.send(
       'post',
       'secrets/create',
+      body: body != null ? body.toJson() : null,
     ));
   }
 
+  /// Inspect a secret
   Future<Secret> secretInspect(String id) async {
     return Secret.fromJson(await _client.send(
       'get',
@@ -1706,6 +1788,7 @@ class Docker {
     ));
   }
 
+  /// Delete a secret
   Future<void> secretDelete(String id) async {
     await _client.send(
       'delete',
@@ -1716,6 +1799,7 @@ class Docker {
     );
   }
 
+  /// Update a Secret
   Future<void> secretUpdate(
       {required String id, SecretSpec? body, required int version}) async {
     await _client.send(
@@ -1727,9 +1811,11 @@ class Docker {
       queryParameters: {
         'version': '$version',
       },
+      body: body != null ? body.toJson() : null,
     );
   }
 
+  /// List configs
   Future<List<Config>> configList({String? filters}) async {
     return (await _client.send(
       'get',
@@ -1742,13 +1828,16 @@ class Docker {
         .toList();
   }
 
+  /// Create a config
   Future<IdResponse> configCreate({ConfigSpec? body}) async {
     return IdResponse.fromJson(await _client.send(
       'post',
       'configs/create',
+      body: body != null ? body.toJson() : null,
     ));
   }
 
+  /// Inspect a config
   Future<Config> configInspect(String id) async {
     return Config.fromJson(await _client.send(
       'get',
@@ -1759,6 +1848,7 @@ class Docker {
     ));
   }
 
+  /// Delete a config
   Future<void> configDelete(String id) async {
     await _client.send(
       'delete',
@@ -1769,6 +1859,7 @@ class Docker {
     );
   }
 
+  /// Update a Config
   Future<void> configUpdate(
       {required String id, ConfigSpec? body, required int version}) async {
     await _client.send(
@@ -1780,6 +1871,7 @@ class Docker {
       queryParameters: {
         'version': '$version',
       },
+      body: body != null ? body.toJson() : null,
     );
   }
 

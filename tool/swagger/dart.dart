@@ -241,23 +241,12 @@ class Operation {
       {required this.httpMethod})
       : assert(!url.startsWith('/'));
 
-  RequestBody? _findBody() {
-    var body = path.requestBody;
-    if (body != null) {
-      var contents = body.content;
-      if (contents != null) {
-        return RequestBody(_api, body, contents);
-      }
-    }
-    return null;
-  }
-
   String toCode() {
     final buffer = StringBuffer();
 
-    var body = _findBody();
-
     var allParameters = path.parameters.toList();
+    var body = allParameters
+        .firstWhereOrNull((p) => p.location == sw.ParameterLocation.body);
 
     var parameters = '';
     var namedParameterMode = true;
@@ -274,10 +263,7 @@ class Operation {
       encodedParameters.add(
           "${parameter.required && namedParameterMode ? 'required' : ''} ${parameterType.toString()}${parameter.required ? '' : '?'} ${dartIdentifier(parameter.name)}");
     }
-    if (body != null) {
-      encodedParameters.add(
-          'required ${body.typeName} ${body.isFileUpload ? 'file' : 'body'}');
-    }
+
     if (encodedParameters.isNotEmpty) {
       var joinedParameters = encodedParameters.join(', ');
       if (namedParameterMode) {
@@ -296,7 +282,7 @@ class Operation {
 
     var returnTypeName = 'void';
     DartType? returnDartType;
-    if (response.schema != null) {
+    if (response.schema != null && httpMethod != sw.HttpMethod.head) {
       var responseSchema = response.schema!;
       if (responseSchema.type != null || responseSchema.ref != null) {
         returnDartType = _api.typeFromSchema(responseSchema);
@@ -304,7 +290,12 @@ class Operation {
       }
     }
 
-    buffer.writeln(documentationComment(path.description, indent: 2));
+    var methodDoc = path.summary;
+    if (path.description.isNotEmpty) {
+      methodDoc = path.description;
+    }
+    buffer.writeln(documentationComment(methodDoc, indent: 2));
+
     buffer.writeln('Future<$returnTypeName> $methodName($parameters) async {');
 
     var parametersCode = '';
@@ -331,15 +322,18 @@ class Operation {
 
     if (httpMethod != sw.HttpMethod.get) {
       if (body != null) {
-        var bodyJson = body.jsonDartType;
-        if (bodyJson != null) {
-          var jsonEncodeCode = bodyJson.toJsonCode(PropertyName('body'), {});
-          parametersCode += ', body: $jsonEncodeCode';
-        } else {
-          assert(body.isFileUpload);
-          parametersCode += ', file: file';
+        var bodyJson = _api.typeFromParameter(body);
+        var jsonEncodeCode =
+            bodyJson.toJsonCode(PropertyName(dartIdentifier(body.name)), {});
+        if (!body.required && jsonEncodeCode != dartIdentifier(body.name)) {
+          jsonEncodeCode =
+              '${dartIdentifier(body.name)} != null ? $jsonEncodeCode : null';
         }
+        parametersCode += ', body: $jsonEncodeCode';
       }
+    }
+    if (path.produces.length == 1 && path.produces.first == 'text/plain') {
+      parametersCode += ', isPlainText: true';
     }
 
     var sendCode =
@@ -389,48 +383,21 @@ class Operation {
     if (parameters.isNotEmpty) {
       queryParametersCode = ', headers: {';
       for (var parameter in parameters) {
-        var defaultValue = parameter.schema?.defaultValue;
+        var defaultValue = parameter.defaultValue;
+        var defaultValueCode = '';
+        if (defaultValue != null) {
+          defaultValueCode = " ?? '$defaultValue'";
+        } else if (!parameter.required) {
+          queryParametersCode +=
+              'if (${dartIdentifier(parameter.name)} != null)';
+        }
 
-        queryParametersCode += "'${parameter.name}': '$defaultValue', \n";
+        queryParametersCode +=
+            "'${parameter.name}': ${dartIdentifier(parameter.name)}$defaultValueCode, \n";
       }
       queryParametersCode += '}';
     }
     return queryParametersCode;
-  }
-}
-
-class RequestBody {
-  final Api _api;
-  final sw.Request request;
-  bool _isFileUpload = false;
-  late sw.Content _content;
-  DartType? _jsonDartType;
-
-  RequestBody(this._api, this.request, Map<String, sw.Content> contents) {
-    var content = contents.entries.first;
-    _content = content.value;
-    if (content.key == 'multipart/form-data' &&
-        content.value.schema?.format == 'binary') {
-      _isFileUpload = true;
-    } else {
-      _jsonDartType = _api.typeFromSchema(_content.schema!);
-    }
-  }
-
-  bool get isRequired => request.required;
-
-  bool get isFileUpload => _isFileUpload;
-
-  DartType? get jsonDartType => _jsonDartType;
-
-  String get typeName {
-    var jsonType = _jsonDartType;
-    if (jsonType != null) {
-      return jsonType.toString();
-    } else {
-      assert(_isFileUpload);
-      return 'MultipartFile';
-    }
   }
 }
 
@@ -999,7 +966,7 @@ class PropertyName {
   late final String _camelCased;
 
   PropertyName(this.original) {
-    _camelCased = dartIdentifier(dartIdentifier(original));
+    _camelCased = dartIdentifier(original);
   }
 
   String get camelCased => _camelCased;

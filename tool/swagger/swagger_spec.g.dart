@@ -38,6 +38,17 @@ Tag _$TagFromJson(Map<String, dynamic> json) {
 }
 
 Path _$PathFromJson(Map<String, dynamic> json) {
+  $checkKeys(json, allowedKeys: const [
+    'summary',
+    'tags',
+    'description',
+    'operationId',
+    'deprecated',
+    'parameters',
+    'responses',
+    'produces',
+    'consumes'
+  ]);
   return Path(
     description: json['description'] as String?,
     operationId: json['operationId'] as String?,
@@ -47,12 +58,13 @@ Path _$PathFromJson(Map<String, dynamic> json) {
     parameters: (json['parameters'] as List<dynamic>?)
         ?.map((e) => Parameter.fromJson(e as Map<String, dynamic>))
         .toList(),
-    requestBody: json['requestBody'] == null
-        ? null
-        : Request.fromJson(json['requestBody'] as Map<String, dynamic>),
     responses: (json['responses'] as Map<String, dynamic>?)?.map(
       (k, e) => MapEntry(k, Response.fromJson(e as Map<String, dynamic>)),
     ),
+    produces:
+        (json['produces'] as List<dynamic>?)?.map((e) => e as String).toList(),
+    consumes:
+        (json['consumes'] as List<dynamic>?)?.map((e) => e as String).toList(),
   );
 }
 

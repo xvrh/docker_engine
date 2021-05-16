@@ -58,7 +58,7 @@ class Tag {
   factory Tag.fromJson(Map<String, dynamic> json) => _$TagFromJson(json);
 }
 
-@JsonSerializable(createToJson: false)
+@JsonSerializable(createToJson: false, disallowUnrecognizedKeys: true)
 class Path {
   final String summary;
   final List<String> tags;
@@ -67,23 +67,27 @@ class Path {
   final bool deprecated;
   final List<Parameter> parameters;
   final Map<String, Response> responses;
-  final Request? requestBody;
+  final List<String> produces;
+  final List<String> consumes;
 
-  Path(
-      {String? description,
-      this.operationId,
-      List<String>? tags,
-      String? summary,
-      bool? deprecated,
-      List<Parameter>? parameters,
-      this.requestBody,
-      Map<String, Response>? responses})
-      : description = description ?? '',
+  Path({
+    String? description,
+    this.operationId,
+    List<String>? tags,
+    String? summary,
+    bool? deprecated,
+    List<Parameter>? parameters,
+    Map<String, Response>? responses,
+    List<String>? produces,
+    List<String>? consumes,
+  })  : description = description ?? '',
         summary = summary ?? '',
         tags = tags ?? const [],
         deprecated = deprecated ?? false,
         parameters = parameters ?? const [],
-        responses = responses ?? const {};
+        responses = responses ?? const {},
+        produces = produces ?? const [],
+        consumes = consumes ?? const [];
 
   factory Path.fromJson(Map<String, dynamic> json) => _$PathFromJson(json);
 }
