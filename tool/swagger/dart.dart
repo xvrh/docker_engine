@@ -78,6 +78,13 @@ class Api {
     } else if (type == 'array') {
       return ListDartType(this, typeFromSchema(schema.items!));
     } else if (type == 'object') {
+      var schemaTitle = schema.title;
+      if (schema.properties.isNotEmpty && schemaTitle != null) {
+        var complexType = InlineComplexType(this, schemaTitle, schema);
+        _complexTypes.add(complexType);
+        return complexType;
+      }
+
       return MapDartType.withDynamic(this);
     } else {
       if (type == 'string' &&
@@ -418,12 +425,15 @@ class ComplexType extends DartType {
       } else if (valueItems != null &&
           valueItems.type == 'object' &&
           valueItems.properties.isNotEmpty) {
-        var complexType =
-            InlineComplexType(api, this, e.key, valueItems, isList: true);
+        var complexType = InlineComplexType(
+            api,
+            InlineComplexType.itemName(api, this, e.key, isList: true),
+            valueItems);
         api._complexTypes.add(complexType);
         dartType = ListDartType(api, complexType);
       } else if (e.value.type == 'object' && e.value.properties.isNotEmpty) {
-        var complexType = InlineComplexType(api, this, e.key, e.value);
+        var complexType = InlineComplexType(
+            api, InlineComplexType.itemName(api, this, e.key), e.value);
         api._complexTypes.add(complexType);
         dartType = complexType;
       } else if (e.value.enums != null) {
@@ -608,15 +618,12 @@ String _fromJsonCodeForComplexType(Api api, DartType type, String accessor,
 }
 
 class InlineComplexType extends ComplexType {
-  InlineComplexType(
-      Api api, DartType parent, String propertyName, sw.Schema schema,
-      {bool isList = false})
-      : super(api, _computeName(api, parent, propertyName, isList: isList),
-            schema) {
+  InlineComplexType(Api api, String name, sw.Schema schema)
+      : super(api, name, schema) {
     assert(schema.type == 'object');
   }
 
-  static String _computeName(Api api, DartType parent, String propertyName,
+  static String itemName(Api api, DartType parent, String propertyName,
       {bool isList = false}) {
     var name =
         '${parent.name}${propertyName.words.toUpperCamel()}${isList ? 'Item' : ''}';

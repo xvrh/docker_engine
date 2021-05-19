@@ -17,4 +17,16 @@ void main() {
     expect(pong, 'OK');
     await docker.systemPingHead();
   });
+
+  test('Events', () async {
+    var events = await docker.systemEvents(
+        since: ((DateTime.now().millisecondsSinceEpoch / 1000) - 60)
+            .toStringAsFixed(0));
+    expect(events, {});
+  });
+
+  test('Data usage', () async {
+    var dataUsage = await docker.systemDataUsage();
+    expect(dataUsage.images, hasLength(greaterThan(0)));
+  });
 }
