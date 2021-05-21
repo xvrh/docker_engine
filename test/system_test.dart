@@ -23,7 +23,7 @@ void main() {
         since: ((DateTime.now().millisecondsSinceEpoch / 1000) - 60)
             .toStringAsFixed(0));
     expect(events, {});
-  });
+  }, skip: 'Not ready');
 
   test('Data usage', () async {
     var dataUsage = await docker.systemDataUsage();
