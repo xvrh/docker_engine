@@ -80,11 +80,9 @@ class HttpUnixClient extends BaseClient {
     if (request is Request) {
       _socket?.write(request.body);
     } else if (request is MultipartRequest) {
-      // FIXME(robert-ancell): Needs to be implemented.
-      assert(false);
+      throw UnimplementedError();
     } else if (request is StreamedRequest) {
-      // FIXME(robert-ancell): Needs to be implemented.
-      assert(false);
+      throw UnimplementedError();
     }
 
     var req = _HttpRequest(request);
@@ -130,6 +128,7 @@ class HttpUnixClient extends BaseClient {
 
   bool _processStatus(_HttpRequest request) {
     var line = _readLine();
+
     if (line == null) {
       return true;
     }
@@ -189,8 +188,11 @@ class HttpUnixClient extends BaseClient {
     request.stream.add(chunk);
     _buffer.removeRange(0, length);
 
-    // FIXME(robert-ancell): Close stream if no content length when get EOF
-    if (_chunkRead == _chunkLength) {
+    if (_chunkLength == null && length == 0) {
+      request.stream.close();
+      _requests.remove(request);
+      return true;
+    } else if (_chunkRead == _chunkLength) {
       request.stream.close();
       _requests.remove(request);
       _parserState = _HttpParserState.status;

@@ -78,6 +78,13 @@ class Api {
     } else if (type == 'array') {
       return ListDartType(this, typeFromSchema(schema.items!));
     } else if (type == 'object') {
+      var schemaTitle = schema.title;
+      if (schema.properties.isNotEmpty && schemaTitle != null) {
+        var complexType = InlineComplexType(this, schemaTitle, schema);
+        _complexTypes.add(complexType);
+        return complexType;
+      }
+
       return MapDartType.withDynamic(this);
     } else {
       if (type == 'string' &&
@@ -241,23 +248,12 @@ class Operation {
       {required this.httpMethod})
       : assert(!url.startsWith('/'));
 
-  RequestBody? _findBody() {
-    var body = path.requestBody;
-    if (body != null) {
-      var contents = body.content;
-      if (contents != null) {
-        return RequestBody(_api, body, contents);
-      }
-    }
-    return null;
-  }
-
   String toCode() {
     final buffer = StringBuffer();
 
-    var body = _findBody();
-
     var allParameters = path.parameters.toList();
+    var body = allParameters
+        .firstWhereOrNull((p) => p.location == sw.ParameterLocation.body);
 
     var parameters = '';
     var namedParameterMode = true;
@@ -274,10 +270,7 @@ class Operation {
       encodedParameters.add(
           "${parameter.required && namedParameterMode ? 'required' : ''} ${parameterType.toString()}${parameter.required ? '' : '?'} ${dartIdentifier(parameter.name)}");
     }
-    if (body != null) {
-      encodedParameters.add(
-          'required ${body.typeName} ${body.isFileUpload ? 'file' : 'body'}');
-    }
+
     if (encodedParameters.isNotEmpty) {
       var joinedParameters = encodedParameters.join(', ');
       if (namedParameterMode) {
@@ -296,7 +289,7 @@ class Operation {
 
     var returnTypeName = 'void';
     DartType? returnDartType;
-    if (response.schema != null) {
+    if (response.schema != null && httpMethod != sw.HttpMethod.head) {
       var responseSchema = response.schema!;
       if (responseSchema.type != null || responseSchema.ref != null) {
         returnDartType = _api.typeFromSchema(responseSchema);
@@ -304,7 +297,12 @@ class Operation {
       }
     }
 
-    buffer.writeln(documentationComment(path.description, indent: 2));
+    var methodDoc = path.summary;
+    if (path.description.isNotEmpty) {
+      methodDoc = path.description;
+    }
+    buffer.writeln(documentationComment(methodDoc, indent: 2));
+
     buffer.writeln('Future<$returnTypeName> $methodName($parameters) async {');
 
     var parametersCode = '';
@@ -331,15 +329,18 @@ class Operation {
 
     if (httpMethod != sw.HttpMethod.get) {
       if (body != null) {
-        var bodyJson = body.jsonDartType;
-        if (bodyJson != null) {
-          var jsonEncodeCode = bodyJson.toJsonCode(PropertyName('body'), {});
-          parametersCode += ', body: $jsonEncodeCode';
-        } else {
-          assert(body.isFileUpload);
-          parametersCode += ', file: file';
+        var bodyJson = _api.typeFromParameter(body);
+        var jsonEncodeCode =
+            bodyJson.toJsonCode(PropertyName(dartIdentifier(body.name)), {});
+        if (!body.required && jsonEncodeCode != dartIdentifier(body.name)) {
+          jsonEncodeCode =
+              '${dartIdentifier(body.name)} != null ? $jsonEncodeCode : null';
         }
+        parametersCode += ', body: $jsonEncodeCode';
       }
+    }
+    if (path.produces.length == 1 && path.produces.first == 'text/plain') {
+      parametersCode += ', isPlainText: true';
     }
 
     var sendCode =
@@ -389,48 +390,21 @@ class Operation {
     if (parameters.isNotEmpty) {
       queryParametersCode = ', headers: {';
       for (var parameter in parameters) {
-        var defaultValue = parameter.schema?.defaultValue;
+        var defaultValue = parameter.defaultValue;
+        var defaultValueCode = '';
+        if (defaultValue != null) {
+          defaultValueCode = " ?? '$defaultValue'";
+        } else if (!parameter.required) {
+          queryParametersCode +=
+              'if (${dartIdentifier(parameter.name)} != null)';
+        }
 
-        queryParametersCode += "'${parameter.name}': '$defaultValue', \n";
+        queryParametersCode +=
+            "'${parameter.name}': ${dartIdentifier(parameter.name)}$defaultValueCode, \n";
       }
       queryParametersCode += '}';
     }
     return queryParametersCode;
-  }
-}
-
-class RequestBody {
-  final Api _api;
-  final sw.Request request;
-  bool _isFileUpload = false;
-  late sw.Content _content;
-  DartType? _jsonDartType;
-
-  RequestBody(this._api, this.request, Map<String, sw.Content> contents) {
-    var content = contents.entries.first;
-    _content = content.value;
-    if (content.key == 'multipart/form-data' &&
-        content.value.schema?.format == 'binary') {
-      _isFileUpload = true;
-    } else {
-      _jsonDartType = _api.typeFromSchema(_content.schema!);
-    }
-  }
-
-  bool get isRequired => request.required;
-
-  bool get isFileUpload => _isFileUpload;
-
-  DartType? get jsonDartType => _jsonDartType;
-
-  String get typeName {
-    var jsonType = _jsonDartType;
-    if (jsonType != null) {
-      return jsonType.toString();
-    } else {
-      assert(_isFileUpload);
-      return 'MultipartFile';
-    }
   }
 }
 
@@ -451,12 +425,15 @@ class ComplexType extends DartType {
       } else if (valueItems != null &&
           valueItems.type == 'object' &&
           valueItems.properties.isNotEmpty) {
-        var complexType =
-            InlineComplexType(api, this, e.key, valueItems, isList: true);
+        var complexType = InlineComplexType(
+            api,
+            InlineComplexType.itemName(api, this, e.key, isList: true),
+            valueItems);
         api._complexTypes.add(complexType);
         dartType = ListDartType(api, complexType);
       } else if (e.value.type == 'object' && e.value.properties.isNotEmpty) {
-        var complexType = InlineComplexType(api, this, e.key, e.value);
+        var complexType = InlineComplexType(
+            api, InlineComplexType.itemName(api, this, e.key), e.value);
         api._complexTypes.add(complexType);
         dartType = complexType;
       } else if (e.value.enums != null) {
@@ -641,15 +618,12 @@ String _fromJsonCodeForComplexType(Api api, DartType type, String accessor,
 }
 
 class InlineComplexType extends ComplexType {
-  InlineComplexType(
-      Api api, DartType parent, String propertyName, sw.Schema schema,
-      {bool isList = false})
-      : super(api, _computeName(api, parent, propertyName, isList: isList),
-            schema) {
+  InlineComplexType(Api api, String name, sw.Schema schema)
+      : super(api, name, schema) {
     assert(schema.type == 'object');
   }
 
-  static String _computeName(Api api, DartType parent, String propertyName,
+  static String itemName(Api api, DartType parent, String propertyName,
       {bool isList = false}) {
     var name =
         '${parent.name}${propertyName.words.toUpperCamel()}${isList ? 'Item' : ''}';
@@ -999,7 +973,7 @@ class PropertyName {
   late final String _camelCased;
 
   PropertyName(this.original) {
-    _camelCased = dartIdentifier(dartIdentifier(original));
+    _camelCased = dartIdentifier(original);
   }
 
   String get camelCased => _camelCased;

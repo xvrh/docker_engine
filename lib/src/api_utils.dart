@@ -21,6 +21,7 @@ class ApiClient {
     Map<String, String>? queryParameters,
     Map<String, String>? headers,
     dynamic body,
+    bool isPlainText = false,
   }) async {
     var path = pathTemplate;
 
@@ -60,16 +61,20 @@ class ApiClient {
     var response = await Response.fromStream(await _client.send(request));
     ApiException.checkResponse(response);
 
-    var decoded = _decode(response);
+    var decoded = _decode(response, isPlainText: isPlainText);
     return decoded as T;
   }
 
-  dynamic _decode(Response response) {
+  dynamic _decode(Response response, {required bool isPlainText}) {
     var bytes = response.bodyBytes;
     if (bytes.isEmpty) return null;
 
     var responseBody = utf8.decode(bytes);
-    return jsonDecode(responseBody);
+    if (isPlainText) {
+      return responseBody;
+    } else {
+      return jsonDecode(responseBody);
+    }
   }
 
   void close() => _client.close();

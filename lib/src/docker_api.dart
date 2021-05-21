@@ -117,21 +117,23 @@ class Docker {
         .toList();
   }
 
-  Future<Map<String, dynamic>> containerCreate(
+  /// Create a container
+  Future<ContainerCreateResponse> containerCreate(
       {String? name, required ContainerConfig body}) async {
-    return await _client.send(
+    return ContainerCreateResponse.fromJson(await _client.send(
       'post',
       'containers/create',
       queryParameters: {
         if (name != null) 'name': name,
       },
-    ) as Map<String, Object?>;
+      body: body.toJson(),
+    ));
   }
 
   /// Return low-level information about a container.
-  Future<Map<String, dynamic>> containerInspect(
+  Future<ContainerInspectResponse> containerInspect(
       {required String id, bool? size}) async {
-    return await _client.send(
+    return ContainerInspectResponse.fromJson(await _client.send(
       'get',
       'containers/{id}/json',
       pathParameters: {
@@ -140,14 +142,14 @@ class Docker {
       queryParameters: {
         if (size != null) 'size': '$size',
       },
-    ) as Map<String, Object?>;
+    ));
   }
 
   /// On Unix systems, this is done by running the `ps` command. This endpoint
   /// is not supported on Windows.
-  Future<Map<String, dynamic>> containerTop(
+  Future<ContainerTopResponse> containerTop(
       {required String id, String? psArgs}) async {
-    return await _client.send(
+    return ContainerTopResponse.fromJson(await _client.send(
       'get',
       'containers/{id}/top',
       pathParameters: {
@@ -156,7 +158,7 @@ class Docker {
       queryParameters: {
         if (psArgs != null) 'ps_args': psArgs,
       },
-    ) as Map<String, Object?>;
+    ));
   }
 
   /// Get `stdout` and `stderr` logs from a container.
@@ -196,7 +198,7 @@ class Docker {
   /// - `0`: Modified
   /// - `1`: Added
   /// - `2`: Deleted
-  Future<List<Map<String, dynamic>>> containerChanges(String id) async {
+  Future<List<ContainerChangeResponseItem>> containerChanges(String id) async {
     return (await _client.send(
       'get',
       'containers/{id}/changes',
@@ -204,7 +206,8 @@ class Docker {
         'id': id,
       },
     ) as List<Object?>)
-        .map((i) => i as Map<String, Object?>? ?? {})
+        .map((i) => ContainerChangeResponseItem.fromJson(
+            i as Map<String, Object?>? ?? const {}))
         .toList();
   }
 
@@ -276,9 +279,11 @@ class Docker {
         if (h != null) 'h': '$h',
         if (w != null) 'w': '$w',
       },
+      isPlainText: true,
     );
   }
 
+  /// Start a container
   Future<void> containerStart({required String id, String? detachKeys}) async {
     await _client.send(
       'post',
@@ -292,6 +297,7 @@ class Docker {
     );
   }
 
+  /// Stop a container
   Future<void> containerStop({required String id, int? t}) async {
     await _client.send(
       'post',
@@ -305,6 +311,7 @@ class Docker {
     );
   }
 
+  /// Restart a container
   Future<void> containerRestart({required String id, int? t}) async {
     await _client.send(
       'post',
@@ -335,17 +342,19 @@ class Docker {
 
   /// Change various configuration options of a container without having to
   /// recreate it.
-  Future<Map<String, dynamic>> containerUpdate(
+  Future<ContainerUpdateResponse> containerUpdate(
       {required String id, required Resources update}) async {
-    return await _client.send(
+    return ContainerUpdateResponse.fromJson(await _client.send(
       'post',
       'containers/{id}/update',
       pathParameters: {
         'id': id,
       },
-    ) as Map<String, Object?>;
+      body: update.toJson(),
+    ));
   }
 
+  /// Rename a container
   Future<void> containerRename(
       {required String id, required String name}) async {
     await _client.send(
@@ -508,6 +517,7 @@ class Docker {
     );
   }
 
+  /// Attach to a container via a websocket
   Future<void> containerAttachWebsocket(
       {required String id,
       String? detachKeys,
@@ -534,9 +544,9 @@ class Docker {
   }
 
   /// Block until a container stops, then returns the exit code.
-  Future<Map<String, dynamic>> containerWait(
+  Future<ContainerWaitResponse> containerWait(
       {required String id, String? condition}) async {
-    return await _client.send(
+    return ContainerWaitResponse.fromJson(await _client.send(
       'post',
       'containers/{id}/wait',
       pathParameters: {
@@ -545,9 +555,10 @@ class Docker {
       queryParameters: {
         if (condition != null) 'condition': condition,
       },
-    ) as Map<String, Object?>;
+    ));
   }
 
+  /// Remove a container
   Future<void> containerDelete(
       {required String id, bool? v, bool? force, bool? link}) async {
     await _client.send(
@@ -616,17 +627,19 @@ class Docker {
           'noOverwriteDirNonDir': noOverwriteDirNonDir,
         if (copyUidgid != null) 'copyUIDGID': copyUidgid,
       },
+      body: inputStream,
     );
   }
 
-  Future<Map<String, dynamic>> containerPrune({String? filters}) async {
-    return await _client.send(
+  /// Delete stopped containers
+  Future<ContainerPruneResponse> containerPrune({String? filters}) async {
+    return ContainerPruneResponse.fromJson(await _client.send(
       'post',
       'containers/prune',
       queryParameters: {
         if (filters != null) 'filters': filters,
       },
-    ) as Map<String, Object?>;
+    ));
   }
 
   /// Returns a list of images on the server. Note that it uses a different,
@@ -719,15 +732,17 @@ class Docker {
         if (outputs != null) 'outputs': outputs,
       },
       headers: {
-        'Content-type': 'null',
-        'X-Registry-Config': 'null',
+        'Content-type': contentType ?? 'application/x-tar',
+        if (xRegistryConfig != null) 'X-Registry-Config': xRegistryConfig,
       },
+      body: inputStream,
     );
   }
 
-  Future<Map<String, dynamic>> buildPrune(
+  /// Delete builder cache
+  Future<BuildPruneResponse> buildPrune(
       {int? keepStorage, bool? all, String? filters}) async {
-    return await _client.send(
+    return BuildPruneResponse.fromJson(await _client.send(
       'post',
       'build/prune',
       queryParameters: {
@@ -735,7 +750,7 @@ class Docker {
         if (all != null) 'all': '$all',
         if (filters != null) 'filters': filters,
       },
-    ) as Map<String, Object?>;
+    ));
   }
 
   /// Create an image by either pulling it from a registry or importing it.
@@ -760,8 +775,9 @@ class Docker {
         if (platform != null) 'platform': platform,
       },
       headers: {
-        'X-Registry-Auth': 'null',
+        if (xRegistryAuth != null) 'X-Registry-Auth': xRegistryAuth,
       },
+      body: inputImage,
     );
   }
 
@@ -777,7 +793,7 @@ class Docker {
   }
 
   /// Return parent layers of an image.
-  Future<List<Map<String, dynamic>>> imageHistory(String name) async {
+  Future<List<HistoryResponseItem>> imageHistory(String name) async {
     return (await _client.send(
       'get',
       'images/{name}/history',
@@ -785,7 +801,8 @@ class Docker {
         'name': name,
       },
     ) as List<Object?>)
-        .map((i) => i as Map<String, Object?>? ?? {})
+        .map((i) => HistoryResponseItem.fromJson(
+            i as Map<String, Object?>? ?? const {}))
         .toList();
   }
 
@@ -810,7 +827,7 @@ class Docker {
         if (tag != null) 'tag': tag,
       },
       headers: {
-        'X-Registry-Auth': 'null',
+        'X-Registry-Auth': xRegistryAuth,
       },
     );
   }
@@ -855,7 +872,7 @@ class Docker {
   }
 
   /// Search for an image on Docker Hub.
-  Future<List<Map<String, dynamic>>> imageSearch(
+  Future<List<ImageSearchResponseItem>> imageSearch(
       {required String term, int? limit, String? filters}) async {
     return (await _client.send(
       'get',
@@ -866,29 +883,33 @@ class Docker {
         if (filters != null) 'filters': filters,
       },
     ) as List<Object?>)
-        .map((i) => i as Map<String, Object?>? ?? {})
+        .map((i) => ImageSearchResponseItem.fromJson(
+            i as Map<String, Object?>? ?? const {}))
         .toList();
   }
 
-  Future<Map<String, dynamic>> imagePrune({String? filters}) async {
-    return await _client.send(
+  /// Delete unused images
+  Future<ImagePruneResponse> imagePrune({String? filters}) async {
+    return ImagePruneResponse.fromJson(await _client.send(
       'post',
       'images/prune',
       queryParameters: {
         if (filters != null) 'filters': filters,
       },
-    ) as Map<String, Object?>;
+    ));
   }
 
   /// Validate credentials for a registry and, if available, get an identity
   /// token for accessing the registry without password.
-  Future<Map<String, dynamic>> systemAuth({AuthConfig? authConfig}) async {
-    return await _client.send(
+  Future<SystemAuthResponse> systemAuth({AuthConfig? authConfig}) async {
+    return SystemAuthResponse.fromJson(await _client.send(
       'post',
       'auth',
-    ) as Map<String, Object?>;
+      body: authConfig != null ? authConfig.toJson() : null,
+    ));
   }
 
+  /// Get system information
   Future<SystemInfo> systemInfo() async {
     return SystemInfo.fromJson(await _client.send(
       'get',
@@ -910,17 +931,20 @@ class Docker {
     return await _client.send(
       'get',
       '_ping',
+      isPlainText: true,
     ) as String;
   }
 
   /// This is a dummy endpoint you can use to test if the server is accessible.
-  Future<String> systemPingHead() async {
-    return await _client.send(
+  Future<void> systemPingHead() async {
+    await _client.send(
       'head',
       '_ping',
-    ) as String;
+      isPlainText: true,
+    );
   }
 
+  /// Create a new image from a container
   Future<IdResponse> imageCommit(
       {ContainerConfig? containerConfig,
       String? container,
@@ -942,6 +966,7 @@ class Docker {
         if (pause != null) 'pause': '$pause',
         if (changes != null) 'changes': changes,
       },
+      body: containerConfig != null ? containerConfig.toJson() : null,
     ));
   }
 
@@ -976,9 +1001,9 @@ class Docker {
   /// Configs report these events: `create`, `update`, and `remove`
   ///
   /// The Builder reports `prune` events
-  Future<Map<String, dynamic>> systemEvents(
+  Future<SystemEventsResponse> systemEvents(
       {String? since, String? until, String? filters}) async {
-    return await _client.send(
+    return SystemEventsResponse.fromJson(await _client.send(
       'get',
       'events',
       queryParameters: {
@@ -986,14 +1011,15 @@ class Docker {
         if (until != null) 'until': until,
         if (filters != null) 'filters': filters,
       },
-    ) as Map<String, Object?>;
+    ));
   }
 
-  Future<Map<String, dynamic>> systemDataUsage() async {
-    return await _client.send(
+  /// Get data usage information
+  Future<SystemDataUsageResponse> systemDataUsage() async {
+    return SystemDataUsageResponse.fromJson(await _client.send(
       'get',
       'system/df',
-    ) as Map<String, Object?>;
+    ));
   }
 
   /// Get a tarball containing all images and metadata for a repository.
@@ -1071,6 +1097,7 @@ class Docker {
       queryParameters: {
         if (quiet != null) 'quiet': '$quiet',
       },
+      body: imagesTarball,
     );
   }
 
@@ -1083,6 +1110,7 @@ class Docker {
       pathParameters: {
         'id': id,
       },
+      body: execConfig,
     ));
   }
 
@@ -1097,6 +1125,7 @@ class Docker {
       pathParameters: {
         'id': id,
       },
+      body: execStartConfig,
     );
   }
 
@@ -1117,33 +1146,37 @@ class Docker {
   }
 
   /// Return low-level information about an exec instance.
-  Future<Map<String, dynamic>> execInspect(String id) async {
-    return await _client.send(
+  Future<ExecInspectResponse> execInspect(String id) async {
+    return ExecInspectResponse.fromJson(await _client.send(
       'get',
       'exec/{id}/json',
       pathParameters: {
         'id': id,
       },
-    ) as Map<String, Object?>;
+    ));
   }
 
-  Future<Map<String, dynamic>> volumeList({String? filters}) async {
-    return await _client.send(
+  /// List volumes
+  Future<VolumeListResponse> volumeList({String? filters}) async {
+    return VolumeListResponse.fromJson(await _client.send(
       'get',
       'volumes',
       queryParameters: {
         if (filters != null) 'filters': filters,
       },
-    ) as Map<String, Object?>;
-  }
-
-  Future<Volume> volumeCreate(Map<String, dynamic> volumeConfig) async {
-    return Volume.fromJson(await _client.send(
-      'post',
-      'volumes/create',
     ));
   }
 
+  /// Create a volume
+  Future<Volume> volumeCreate({required VolumeConfig volumeConfig}) async {
+    return Volume.fromJson(await _client.send(
+      'post',
+      'volumes/create',
+      body: volumeConfig.toJson(),
+    ));
+  }
+
+  /// Inspect a volume
   Future<Volume> volumeInspect(String name) async {
     return Volume.fromJson(await _client.send(
       'get',
@@ -1168,14 +1201,15 @@ class Docker {
     );
   }
 
-  Future<Map<String, dynamic>> volumePrune({String? filters}) async {
-    return await _client.send(
+  /// Delete unused volumes
+  Future<VolumePruneResponse> volumePrune({String? filters}) async {
+    return VolumePruneResponse.fromJson(await _client.send(
       'post',
       'volumes/prune',
       queryParameters: {
         if (filters != null) 'filters': filters,
       },
-    ) as Map<String, Object?>;
+    ));
   }
 
   /// Returns a list of networks. For details on the format, see the
@@ -1196,6 +1230,7 @@ class Docker {
         .toList();
   }
 
+  /// Inspect a network
   Future<Network> networkInspect(
       {required String id, bool? verbose, String? scope}) async {
     return Network.fromJson(await _client.send(
@@ -1211,6 +1246,7 @@ class Docker {
     ));
   }
 
+  /// Remove a network
   Future<void> networkDelete(String id) async {
     await _client.send(
       'delete',
@@ -1221,14 +1257,17 @@ class Docker {
     );
   }
 
-  Future<Map<String, dynamic>> networkCreate(
-      Map<String, dynamic> networkConfig) async {
-    return await _client.send(
+  /// Create a network
+  Future<NetworkCreateResponse> networkCreate(
+      {required Map<String, dynamic> networkConfig}) async {
+    return NetworkCreateResponse.fromJson(await _client.send(
       'post',
       'networks/create',
-    ) as Map<String, Object?>;
+      body: networkConfig,
+    ));
   }
 
+  /// Connect a container to a network
   Future<void> networkConnect(
       {required String id, required Map<String, dynamic> container}) async {
     await _client.send(
@@ -1237,9 +1276,11 @@ class Docker {
       pathParameters: {
         'id': id,
       },
+      body: container,
     );
   }
 
+  /// Disconnect a container from a network
   Future<void> networkDisconnect(
       {required String id, required Map<String, dynamic> container}) async {
     await _client.send(
@@ -1248,17 +1289,19 @@ class Docker {
       pathParameters: {
         'id': id,
       },
+      body: container,
     );
   }
 
-  Future<Map<String, dynamic>> networkPrune({String? filters}) async {
-    return await _client.send(
+  /// Delete unused networks
+  Future<NetworkPruneResponse> networkPrune({String? filters}) async {
+    return NetworkPruneResponse.fromJson(await _client.send(
       'post',
       'networks/prune',
       queryParameters: {
         if (filters != null) 'filters': filters,
       },
-    ) as Map<String, Object?>;
+    ));
   }
 
   /// Returns information about installed plugins.
@@ -1274,7 +1317,8 @@ class Docker {
         .toList();
   }
 
-  Future<List<Map<String, dynamic>>> getPluginPrivileges(String remote) async {
+  /// Get plugin privileges
+  Future<List<PluginPrivilegeItem>> getPluginPrivileges(String remote) async {
     return (await _client.send(
       'get',
       'plugins/privileges',
@@ -1282,7 +1326,8 @@ class Docker {
         'remote': remote,
       },
     ) as List<Object?>)
-        .map((i) => i as Map<String, Object?>? ?? {})
+        .map((i) => PluginPrivilegeItem.fromJson(
+            i as Map<String, Object?>? ?? const {}))
         .toList();
   }
 
@@ -1302,11 +1347,13 @@ class Docker {
         if (name != null) 'name': name,
       },
       headers: {
-        'X-Registry-Auth': 'null',
+        if (xRegistryAuth != null) 'X-Registry-Auth': xRegistryAuth,
       },
+      body: body,
     );
   }
 
+  /// Inspect a plugin
   Future<Plugin> pluginInspect(String name) async {
     return Plugin.fromJson(await _client.send(
       'get',
@@ -1317,6 +1364,7 @@ class Docker {
     ));
   }
 
+  /// Remove a plugin
   Future<Plugin> pluginDelete({required String name, bool? force}) async {
     return Plugin.fromJson(await _client.send(
       'delete',
@@ -1330,6 +1378,7 @@ class Docker {
     ));
   }
 
+  /// Enable a plugin
   Future<void> pluginEnable({required String name, int? timeout}) async {
     await _client.send(
       'post',
@@ -1343,6 +1392,7 @@ class Docker {
     );
   }
 
+  /// Disable a plugin
   Future<void> pluginDisable(String name) async {
     await _client.send(
       'post',
@@ -1353,6 +1403,7 @@ class Docker {
     );
   }
 
+  /// Upgrade a plugin
   Future<void> pluginUpgrade(
       {required String name,
       required String remote,
@@ -1368,11 +1419,13 @@ class Docker {
         'remote': remote,
       },
       headers: {
-        'X-Registry-Auth': 'null',
+        if (xRegistryAuth != null) 'X-Registry-Auth': xRegistryAuth,
       },
+      body: body,
     );
   }
 
+  /// Create a plugin
   Future<void> pluginCreate({required String name, String? tarContext}) async {
     await _client.send(
       'post',
@@ -1380,6 +1433,7 @@ class Docker {
       queryParameters: {
         'name': name,
       },
+      body: tarContext,
     );
   }
 
@@ -1394,6 +1448,7 @@ class Docker {
     );
   }
 
+  /// Configure a plugin
   Future<void> pluginSet({required String name, List<String>? body}) async {
     await _client.send(
       'post',
@@ -1401,9 +1456,11 @@ class Docker {
       pathParameters: {
         'name': name,
       },
+      body: body,
     );
   }
 
+  /// List nodes
   Future<List<Node>> nodeList({String? filters}) async {
     return (await _client.send(
       'get',
@@ -1416,6 +1473,7 @@ class Docker {
         .toList();
   }
 
+  /// Inspect a node
   Future<Node> nodeInspect(String id) async {
     return Node.fromJson(await _client.send(
       'get',
@@ -1426,6 +1484,7 @@ class Docker {
     ));
   }
 
+  /// Delete a node
   Future<void> nodeDelete({required String id, bool? force}) async {
     await _client.send(
       'delete',
@@ -1439,6 +1498,7 @@ class Docker {
     );
   }
 
+  /// Update a node
   Future<void> nodeUpdate(
       {required String id, NodeSpec? body, required int version}) async {
     await _client.send(
@@ -1450,9 +1510,11 @@ class Docker {
       queryParameters: {
         'version': '$version',
       },
+      body: body != null ? body.toJson() : null,
     );
   }
 
+  /// Inspect swarm
   Future<Swarm> swarmInspect() async {
     return Swarm.fromJson(await _client.send(
       'get',
@@ -1460,20 +1522,25 @@ class Docker {
     ));
   }
 
-  Future<String> swarmInit(Map<String, dynamic> body) async {
+  /// Initialize a new swarm
+  Future<String> swarmInit({required Map<String, dynamic> body}) async {
     return await _client.send(
       'post',
       'swarm/init',
+      body: body,
     ) as String;
   }
 
-  Future<void> swarmJoin(Map<String, dynamic> body) async {
+  /// Join an existing swarm
+  Future<void> swarmJoin({required Map<String, dynamic> body}) async {
     await _client.send(
       'post',
       'swarm/join',
+      body: body,
     );
   }
 
+  /// Leave a swarm
   Future<void> swarmLeave({bool? force}) async {
     await _client.send(
       'post',
@@ -1484,6 +1551,7 @@ class Docker {
     );
   }
 
+  /// Update a swarm
   Future<void> swarmUpdate(
       {required SwarmSpec body,
       required int version,
@@ -1502,23 +1570,28 @@ class Docker {
         if (rotateManagerUnlockKey != null)
           'rotateManagerUnlockKey': '$rotateManagerUnlockKey',
       },
+      body: body.toJson(),
     );
   }
 
-  Future<Map<String, dynamic>> swarmUnlockkey() async {
-    return await _client.send(
+  /// Get the unlock key
+  Future<UnlockKeyResponse> swarmUnlockkey() async {
+    return UnlockKeyResponse.fromJson(await _client.send(
       'get',
       'swarm/unlockkey',
-    ) as Map<String, Object?>;
+    ));
   }
 
-  Future<void> swarmUnlock(Map<String, dynamic> body) async {
+  /// Unlock a locked manager
+  Future<void> swarmUnlock({required Map<String, dynamic> body}) async {
     await _client.send(
       'post',
       'swarm/unlock',
+      body: body,
     );
   }
 
+  /// List services
   Future<List<Service>> serviceList({String? filters, bool? status}) async {
     return (await _client.send(
       'get',
@@ -1532,17 +1605,20 @@ class Docker {
         .toList();
   }
 
-  Future<Map<String, dynamic>> serviceCreate(
+  /// Create a service
+  Future<ServiceCreateResponse> serviceCreate(
       {required ServiceSpec body, String? xRegistryAuth}) async {
-    return await _client.send(
+    return ServiceCreateResponse.fromJson(await _client.send(
       'post',
       'services/create',
       headers: {
-        'X-Registry-Auth': 'null',
+        if (xRegistryAuth != null) 'X-Registry-Auth': xRegistryAuth,
       },
-    ) as Map<String, Object?>;
+      body: body.toJson(),
+    ));
   }
 
+  /// Inspect a service
   Future<Service> serviceInspect(
       {required String id, bool? insertDefaults}) async {
     return Service.fromJson(await _client.send(
@@ -1557,6 +1633,7 @@ class Docker {
     ));
   }
 
+  /// Delete a service
   Future<void> serviceDelete(String id) async {
     await _client.send(
       'delete',
@@ -1567,6 +1644,7 @@ class Docker {
     );
   }
 
+  /// Update a service
   Future<ServiceUpdateResponse> serviceUpdate(
       {required String id,
       required ServiceSpec body,
@@ -1586,8 +1664,9 @@ class Docker {
         if (rollback != null) 'rollback': rollback,
       },
       headers: {
-        'X-Registry-Auth': 'null',
+        if (xRegistryAuth != null) 'X-Registry-Auth': xRegistryAuth,
       },
+      body: body.toJson(),
     ));
   }
 
@@ -1623,6 +1702,7 @@ class Docker {
     ) as String;
   }
 
+  /// List tasks
   Future<List<Task>> taskList({String? filters}) async {
     return (await _client.send(
       'get',
@@ -1635,6 +1715,7 @@ class Docker {
         .toList();
   }
 
+  /// Inspect a task
   Future<Task> taskInspect(String id) async {
     return Task.fromJson(await _client.send(
       'get',
@@ -1677,6 +1758,7 @@ class Docker {
     ) as String;
   }
 
+  /// List secrets
   Future<List<Secret>> secretList({String? filters}) async {
     return (await _client.send(
       'get',
@@ -1689,13 +1771,16 @@ class Docker {
         .toList();
   }
 
+  /// Create a secret
   Future<IdResponse> secretCreate({SecretSpec? body}) async {
     return IdResponse.fromJson(await _client.send(
       'post',
       'secrets/create',
+      body: body != null ? body.toJson() : null,
     ));
   }
 
+  /// Inspect a secret
   Future<Secret> secretInspect(String id) async {
     return Secret.fromJson(await _client.send(
       'get',
@@ -1706,6 +1791,7 @@ class Docker {
     ));
   }
 
+  /// Delete a secret
   Future<void> secretDelete(String id) async {
     await _client.send(
       'delete',
@@ -1716,6 +1802,7 @@ class Docker {
     );
   }
 
+  /// Update a Secret
   Future<void> secretUpdate(
       {required String id, SecretSpec? body, required int version}) async {
     await _client.send(
@@ -1727,9 +1814,11 @@ class Docker {
       queryParameters: {
         'version': '$version',
       },
+      body: body != null ? body.toJson() : null,
     );
   }
 
+  /// List configs
   Future<List<Config>> configList({String? filters}) async {
     return (await _client.send(
       'get',
@@ -1742,13 +1831,16 @@ class Docker {
         .toList();
   }
 
+  /// Create a config
   Future<IdResponse> configCreate({ConfigSpec? body}) async {
     return IdResponse.fromJson(await _client.send(
       'post',
       'configs/create',
+      body: body != null ? body.toJson() : null,
     ));
   }
 
+  /// Inspect a config
   Future<Config> configInspect(String id) async {
     return Config.fromJson(await _client.send(
       'get',
@@ -1759,6 +1851,7 @@ class Docker {
     ));
   }
 
+  /// Delete a config
   Future<void> configDelete(String id) async {
     await _client.send(
       'delete',
@@ -1769,6 +1862,7 @@ class Docker {
     );
   }
 
+  /// Update a Config
   Future<void> configUpdate(
       {required String id, ConfigSpec? body, required int version}) async {
     await _client.send(
@@ -1780,18 +1874,19 @@ class Docker {
       queryParameters: {
         'version': '$version',
       },
+      body: body != null ? body.toJson() : null,
     );
   }
 
   /// Return image digest and platform information by contacting the registry.
-  Future<Map<String, dynamic>> distributionInspect(String name) async {
-    return await _client.send(
+  Future<DistributionInspectResponse> distributionInspect(String name) async {
+    return DistributionInspectResponse.fromJson(await _client.send(
       'get',
       'distribution/{name}/json',
       pathParameters: {
         'name': name,
       },
-    ) as Map<String, Object?>;
+    ));
   }
 
   /// Start a new interactive session with a server. Session allows server to
@@ -2264,6 +2359,46 @@ class BuildInfo {
   }
 }
 
+class BuildPruneResponse {
+  final List<String> cachesDeleted;
+
+  /// Disk space reclaimed in bytes
+  final int? spaceReclaimed;
+
+  BuildPruneResponse({List<String>? cachesDeleted, this.spaceReclaimed})
+      : cachesDeleted = cachesDeleted ?? [];
+
+  factory BuildPruneResponse.fromJson(Map<String, Object?> json) {
+    return BuildPruneResponse(
+      cachesDeleted: (json[r'CachesDeleted'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+      spaceReclaimed: (json[r'SpaceReclaimed'] as num?)?.toInt(),
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var cachesDeleted = this.cachesDeleted;
+    var spaceReclaimed = this.spaceReclaimed;
+
+    final json = <String, Object?>{};
+    json[r'CachesDeleted'] = cachesDeleted;
+    if (spaceReclaimed != null) {
+      json[r'SpaceReclaimed'] = spaceReclaimed;
+    }
+    return json;
+  }
+
+  BuildPruneResponse copyWith(
+      {List<String>? cachesDeleted, int? spaceReclaimed}) {
+    return BuildPruneResponse(
+      cachesDeleted: cachesDeleted ?? this.cachesDeleted,
+      spaceReclaimed: spaceReclaimed ?? this.spaceReclaimed,
+    );
+  }
+}
+
 /// ClusterInfo represents information about the swarm as is returned by the
 /// "/info" endpoint. Join-tokens are not included.
 class ClusterInfo {
@@ -2577,6 +2712,68 @@ class ConfigSpec {
   }
 }
 
+/// change item in response to ContainerChanges operation
+class ContainerChangeResponseItem {
+  /// Path to file that has changed
+  final String path;
+
+  /// Kind of change
+  final ContainerChangeResponseItemKind kind;
+
+  ContainerChangeResponseItem({required this.path, required this.kind});
+
+  factory ContainerChangeResponseItem.fromJson(Map<String, Object?> json) {
+    return ContainerChangeResponseItem(
+      path: json[r'Path'] as String? ?? '',
+      kind: ContainerChangeResponseItemKind.fromValue(
+          json[r'Kind'] as String? ?? ''),
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var path = this.path;
+    var kind = this.kind;
+
+    final json = <String, Object?>{};
+    json[r'Path'] = path;
+    json[r'Kind'] = kind.value;
+    return json;
+  }
+
+  ContainerChangeResponseItem copyWith(
+      {String? path, ContainerChangeResponseItemKind? kind}) {
+    return ContainerChangeResponseItem(
+      path: path ?? this.path,
+      kind: kind ?? this.kind,
+    );
+  }
+}
+
+class ContainerChangeResponseItemKind {
+  static const $0 = ContainerChangeResponseItemKind._('0');
+  static const $1 = ContainerChangeResponseItemKind._('1');
+  static const $2 = ContainerChangeResponseItemKind._('2');
+
+  static const values = [
+    $0,
+    $1,
+    $2,
+  ];
+  final String value;
+
+  const ContainerChangeResponseItemKind._(this.value);
+
+  static ContainerChangeResponseItemKind fromValue(String value) =>
+      values.firstWhere((e) => e.value == value,
+          orElse: () => ContainerChangeResponseItemKind._(value));
+
+  /// An enum received from the server but this version of the client doesn't recognize it.
+  bool get isUnknown => values.every((v) => v.value != value);
+
+  @override
+  String toString() => value;
+}
+
 /// Configuration for a container that is portable between hosts
 class ContainerConfig {
   /// The hostname to use for the container, as a valid RFC 1123 hostname.
@@ -2880,6 +3077,366 @@ class ContainerConfig {
       stopSignal: stopSignal ?? this.stopSignal,
       stopTimeout: stopTimeout ?? this.stopTimeout,
       shell: shell ?? this.shell,
+    );
+  }
+}
+
+/// OK response to ContainerCreate operation
+class ContainerCreateResponse {
+  /// The ID of the created container
+  final String id;
+
+  /// Warnings encountered when creating the container
+  final List<String> warnings;
+
+  ContainerCreateResponse({required this.id, required this.warnings});
+
+  factory ContainerCreateResponse.fromJson(Map<String, Object?> json) {
+    return ContainerCreateResponse(
+      id: json[r'Id'] as String? ?? '',
+      warnings: (json[r'Warnings'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var id = this.id;
+    var warnings = this.warnings;
+
+    final json = <String, Object?>{};
+    json[r'Id'] = id;
+    json[r'Warnings'] = warnings;
+    return json;
+  }
+
+  ContainerCreateResponse copyWith({String? id, List<String>? warnings}) {
+    return ContainerCreateResponse(
+      id: id ?? this.id,
+      warnings: warnings ?? this.warnings,
+    );
+  }
+}
+
+class ContainerInspectResponse {
+  /// The ID of the container
+  final String? id;
+
+  /// The time the container was created
+  final String? created;
+
+  /// The path to the command being run
+  final String? path;
+
+  /// The arguments to the command being run
+  final List<String> args;
+  final ContainerState? state;
+
+  /// The container's image ID
+  final String? image;
+  final String? resolvConfPath;
+  final String? hostnamePath;
+  final String? hostsPath;
+  final String? logPath;
+  final String? name;
+  final int? restartCount;
+  final String? driver;
+  final String? platform;
+  final String? mountLabel;
+  final String? processLabel;
+  final String? appArmorProfile;
+
+  /// IDs of exec instances that are running in the container.
+  final List<String> execiDs;
+  final HostConfig? hostConfig;
+  final GraphDriverData? graphDriver;
+
+  /// The size of files that have been created or changed by this
+  /// container.
+  final int? sizeRw;
+
+  /// The total size of all the files in this container.
+  final int? sizeRootFs;
+  final List<MountPoint> mounts;
+  final ContainerConfig? config;
+  final NetworkSettings? networkSettings;
+
+  ContainerInspectResponse(
+      {this.id,
+      this.created,
+      this.path,
+      List<String>? args,
+      this.state,
+      this.image,
+      this.resolvConfPath,
+      this.hostnamePath,
+      this.hostsPath,
+      this.logPath,
+      this.name,
+      this.restartCount,
+      this.driver,
+      this.platform,
+      this.mountLabel,
+      this.processLabel,
+      this.appArmorProfile,
+      List<String>? execiDs,
+      this.hostConfig,
+      this.graphDriver,
+      this.sizeRw,
+      this.sizeRootFs,
+      List<MountPoint>? mounts,
+      this.config,
+      this.networkSettings})
+      : args = args ?? [],
+        execiDs = execiDs ?? [],
+        mounts = mounts ?? [];
+
+  factory ContainerInspectResponse.fromJson(Map<String, Object?> json) {
+    return ContainerInspectResponse(
+      id: json[r'Id'] as String?,
+      created: json[r'Created'] as String?,
+      path: json[r'Path'] as String?,
+      args: (json[r'Args'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+      state: json[r'State'] != null
+          ? ContainerState.fromJson(json[r'State']! as Map<String, Object?>)
+          : null,
+      image: json[r'Image'] as String?,
+      resolvConfPath: json[r'ResolvConfPath'] as String?,
+      hostnamePath: json[r'HostnamePath'] as String?,
+      hostsPath: json[r'HostsPath'] as String?,
+      logPath: json[r'LogPath'] as String?,
+      name: json[r'Name'] as String?,
+      restartCount: (json[r'RestartCount'] as num?)?.toInt(),
+      driver: json[r'Driver'] as String?,
+      platform: json[r'Platform'] as String?,
+      mountLabel: json[r'MountLabel'] as String?,
+      processLabel: json[r'ProcessLabel'] as String?,
+      appArmorProfile: json[r'AppArmorProfile'] as String?,
+      execiDs: (json[r'ExecIDs'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+      hostConfig: json[r'HostConfig'] != null
+          ? HostConfig.fromJson(json[r'HostConfig']! as Map<String, Object?>)
+          : null,
+      graphDriver: json[r'GraphDriver'] != null
+          ? GraphDriverData.fromJson(
+              json[r'GraphDriver']! as Map<String, Object?>)
+          : null,
+      sizeRw: (json[r'SizeRw'] as num?)?.toInt(),
+      sizeRootFs: (json[r'SizeRootFs'] as num?)?.toInt(),
+      mounts: (json[r'Mounts'] as List<Object?>?)
+              ?.map((i) =>
+                  MountPoint.fromJson(i as Map<String, Object?>? ?? const {}))
+              .toList() ??
+          [],
+      config: json[r'Config'] != null
+          ? ContainerConfig.fromJson(json[r'Config']! as Map<String, Object?>)
+          : null,
+      networkSettings: json[r'NetworkSettings'] != null
+          ? NetworkSettings.fromJson(
+              json[r'NetworkSettings']! as Map<String, Object?>)
+          : null,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var id = this.id;
+    var created = this.created;
+    var path = this.path;
+    var args = this.args;
+    var state = this.state;
+    var image = this.image;
+    var resolvConfPath = this.resolvConfPath;
+    var hostnamePath = this.hostnamePath;
+    var hostsPath = this.hostsPath;
+    var logPath = this.logPath;
+    var name = this.name;
+    var restartCount = this.restartCount;
+    var driver = this.driver;
+    var platform = this.platform;
+    var mountLabel = this.mountLabel;
+    var processLabel = this.processLabel;
+    var appArmorProfile = this.appArmorProfile;
+    var execiDs = this.execiDs;
+    var hostConfig = this.hostConfig;
+    var graphDriver = this.graphDriver;
+    var sizeRw = this.sizeRw;
+    var sizeRootFs = this.sizeRootFs;
+    var mounts = this.mounts;
+    var config = this.config;
+    var networkSettings = this.networkSettings;
+
+    final json = <String, Object?>{};
+    if (id != null) {
+      json[r'Id'] = id;
+    }
+    if (created != null) {
+      json[r'Created'] = created;
+    }
+    if (path != null) {
+      json[r'Path'] = path;
+    }
+    json[r'Args'] = args;
+    if (state != null) {
+      json[r'State'] = state.toJson();
+    }
+    if (image != null) {
+      json[r'Image'] = image;
+    }
+    if (resolvConfPath != null) {
+      json[r'ResolvConfPath'] = resolvConfPath;
+    }
+    if (hostnamePath != null) {
+      json[r'HostnamePath'] = hostnamePath;
+    }
+    if (hostsPath != null) {
+      json[r'HostsPath'] = hostsPath;
+    }
+    if (logPath != null) {
+      json[r'LogPath'] = logPath;
+    }
+    if (name != null) {
+      json[r'Name'] = name;
+    }
+    if (restartCount != null) {
+      json[r'RestartCount'] = restartCount;
+    }
+    if (driver != null) {
+      json[r'Driver'] = driver;
+    }
+    if (platform != null) {
+      json[r'Platform'] = platform;
+    }
+    if (mountLabel != null) {
+      json[r'MountLabel'] = mountLabel;
+    }
+    if (processLabel != null) {
+      json[r'ProcessLabel'] = processLabel;
+    }
+    if (appArmorProfile != null) {
+      json[r'AppArmorProfile'] = appArmorProfile;
+    }
+    json[r'ExecIDs'] = execiDs;
+    if (hostConfig != null) {
+      json[r'HostConfig'] = hostConfig.toJson();
+    }
+    if (graphDriver != null) {
+      json[r'GraphDriver'] = graphDriver.toJson();
+    }
+    if (sizeRw != null) {
+      json[r'SizeRw'] = sizeRw;
+    }
+    if (sizeRootFs != null) {
+      json[r'SizeRootFs'] = sizeRootFs;
+    }
+    json[r'Mounts'] = mounts.map((i) => i.toJson()).toList();
+    if (config != null) {
+      json[r'Config'] = config.toJson();
+    }
+    if (networkSettings != null) {
+      json[r'NetworkSettings'] = networkSettings.toJson();
+    }
+    return json;
+  }
+
+  ContainerInspectResponse copyWith(
+      {String? id,
+      String? created,
+      String? path,
+      List<String>? args,
+      ContainerState? state,
+      String? image,
+      String? resolvConfPath,
+      String? hostnamePath,
+      String? hostsPath,
+      String? logPath,
+      String? name,
+      int? restartCount,
+      String? driver,
+      String? platform,
+      String? mountLabel,
+      String? processLabel,
+      String? appArmorProfile,
+      List<String>? execiDs,
+      HostConfig? hostConfig,
+      GraphDriverData? graphDriver,
+      int? sizeRw,
+      int? sizeRootFs,
+      List<MountPoint>? mounts,
+      ContainerConfig? config,
+      NetworkSettings? networkSettings}) {
+    return ContainerInspectResponse(
+      id: id ?? this.id,
+      created: created ?? this.created,
+      path: path ?? this.path,
+      args: args ?? this.args,
+      state: state ?? this.state,
+      image: image ?? this.image,
+      resolvConfPath: resolvConfPath ?? this.resolvConfPath,
+      hostnamePath: hostnamePath ?? this.hostnamePath,
+      hostsPath: hostsPath ?? this.hostsPath,
+      logPath: logPath ?? this.logPath,
+      name: name ?? this.name,
+      restartCount: restartCount ?? this.restartCount,
+      driver: driver ?? this.driver,
+      platform: platform ?? this.platform,
+      mountLabel: mountLabel ?? this.mountLabel,
+      processLabel: processLabel ?? this.processLabel,
+      appArmorProfile: appArmorProfile ?? this.appArmorProfile,
+      execiDs: execiDs ?? this.execiDs,
+      hostConfig: hostConfig ?? this.hostConfig,
+      graphDriver: graphDriver ?? this.graphDriver,
+      sizeRw: sizeRw ?? this.sizeRw,
+      sizeRootFs: sizeRootFs ?? this.sizeRootFs,
+      mounts: mounts ?? this.mounts,
+      config: config ?? this.config,
+      networkSettings: networkSettings ?? this.networkSettings,
+    );
+  }
+}
+
+class ContainerPruneResponse {
+  /// Container IDs that were deleted
+  final List<String> containersDeleted;
+
+  /// Disk space reclaimed in bytes
+  final int? spaceReclaimed;
+
+  ContainerPruneResponse({List<String>? containersDeleted, this.spaceReclaimed})
+      : containersDeleted = containersDeleted ?? [];
+
+  factory ContainerPruneResponse.fromJson(Map<String, Object?> json) {
+    return ContainerPruneResponse(
+      containersDeleted: (json[r'ContainersDeleted'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+      spaceReclaimed: (json[r'SpaceReclaimed'] as num?)?.toInt(),
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var containersDeleted = this.containersDeleted;
+    var spaceReclaimed = this.spaceReclaimed;
+
+    final json = <String, Object?>{};
+    json[r'ContainersDeleted'] = containersDeleted;
+    if (spaceReclaimed != null) {
+      json[r'SpaceReclaimed'] = spaceReclaimed;
+    }
+    return json;
+  }
+
+  ContainerPruneResponse copyWith(
+      {List<String>? containersDeleted, int? spaceReclaimed}) {
+    return ContainerPruneResponse(
+      containersDeleted: containersDeleted ?? this.containersDeleted,
+      spaceReclaimed: spaceReclaimed ?? this.spaceReclaimed,
     );
   }
 }
@@ -3330,6 +3887,156 @@ class ContainerSummaryNetworkSettings {
   }
 }
 
+/// OK response to ContainerTop operation
+class ContainerTopResponse {
+  /// The ps column titles
+  final List<String> titles;
+
+  /// Each process running in the container, where each is process
+  /// is an array of values corresponding to the titles.
+  final List<List<String>> processes;
+
+  ContainerTopResponse({List<String>? titles, List<List<String>>? processes})
+      : titles = titles ?? [],
+        processes = processes ?? [];
+
+  factory ContainerTopResponse.fromJson(Map<String, Object?> json) {
+    return ContainerTopResponse(
+      titles: (json[r'Titles'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+      processes: (json[r'Processes'] as List<Object?>?)
+              ?.map((i) =>
+                  (i as List<Object?>?)
+                      ?.map((i) => i as String? ?? '')
+                      .toList() ??
+                  [])
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var titles = this.titles;
+    var processes = this.processes;
+
+    final json = <String, Object?>{};
+    json[r'Titles'] = titles;
+    json[r'Processes'] = processes;
+    return json;
+  }
+
+  ContainerTopResponse copyWith(
+      {List<String>? titles, List<List<String>>? processes}) {
+    return ContainerTopResponse(
+      titles: titles ?? this.titles,
+      processes: processes ?? this.processes,
+    );
+  }
+}
+
+/// OK response to ContainerUpdate operation
+class ContainerUpdateResponse {
+  final List<String> warnings;
+
+  ContainerUpdateResponse({List<String>? warnings}) : warnings = warnings ?? [];
+
+  factory ContainerUpdateResponse.fromJson(Map<String, Object?> json) {
+    return ContainerUpdateResponse(
+      warnings: (json[r'Warnings'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var warnings = this.warnings;
+
+    final json = <String, Object?>{};
+    json[r'Warnings'] = warnings;
+    return json;
+  }
+
+  ContainerUpdateResponse copyWith({List<String>? warnings}) {
+    return ContainerUpdateResponse(
+      warnings: warnings ?? this.warnings,
+    );
+  }
+}
+
+/// OK response to ContainerWait operation
+class ContainerWaitResponse {
+  /// Exit code of the container
+  final int statusCode;
+
+  /// container waiting error, if any
+  final ContainerWaitResponseError? error;
+
+  ContainerWaitResponse({required this.statusCode, this.error});
+
+  factory ContainerWaitResponse.fromJson(Map<String, Object?> json) {
+    return ContainerWaitResponse(
+      statusCode: (json[r'StatusCode'] as num?)?.toInt() ?? 0,
+      error: json[r'Error'] != null
+          ? ContainerWaitResponseError.fromJson(
+              json[r'Error']! as Map<String, Object?>)
+          : null,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var statusCode = this.statusCode;
+    var error = this.error;
+
+    final json = <String, Object?>{};
+    json[r'StatusCode'] = statusCode;
+    if (error != null) {
+      json[r'Error'] = error.toJson();
+    }
+    return json;
+  }
+
+  ContainerWaitResponse copyWith(
+      {int? statusCode, ContainerWaitResponseError? error}) {
+    return ContainerWaitResponse(
+      statusCode: statusCode ?? this.statusCode,
+      error: error ?? this.error,
+    );
+  }
+}
+
+/// container waiting error, if any
+class ContainerWaitResponseError {
+  /// Details of an error
+  final String? message;
+
+  ContainerWaitResponseError({this.message});
+
+  factory ContainerWaitResponseError.fromJson(Map<String, Object?> json) {
+    return ContainerWaitResponseError(
+      message: json[r'Message'] as String?,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var message = this.message;
+
+    final json = <String, Object?>{};
+    if (message != null) {
+      json[r'Message'] = message;
+    }
+    return json;
+  }
+
+  ContainerWaitResponseError copyWith({String? message}) {
+    return ContainerWaitResponseError(
+      message: message ?? this.message,
+    );
+  }
+}
+
 class CreateImageInfo {
   final String? id;
   final String? error;
@@ -3518,6 +4225,183 @@ class DeviceRequest {
       deviceiDs: deviceiDs ?? this.deviceiDs,
       capabilities: capabilities ?? this.capabilities,
       options: options ?? this.options,
+    );
+  }
+}
+
+class DistributionInspectResponse {
+  /// A descriptor struct containing digest, media type, and size.
+  final DistributionInspectResponseDescriptor descriptor;
+
+  /// An array containing all platforms supported by the image.
+  final List<DistributionInspectResponsePlatformsItem> platforms;
+
+  DistributionInspectResponse(
+      {required this.descriptor, required this.platforms});
+
+  factory DistributionInspectResponse.fromJson(Map<String, Object?> json) {
+    return DistributionInspectResponse(
+      descriptor: DistributionInspectResponseDescriptor.fromJson(
+          json[r'Descriptor'] as Map<String, Object?>? ?? const {}),
+      platforms: (json[r'Platforms'] as List<Object?>?)
+              ?.map((i) => DistributionInspectResponsePlatformsItem.fromJson(
+                  i as Map<String, Object?>? ?? const {}))
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var descriptor = this.descriptor;
+    var platforms = this.platforms;
+
+    final json = <String, Object?>{};
+    json[r'Descriptor'] = descriptor.toJson();
+    json[r'Platforms'] = platforms.map((i) => i.toJson()).toList();
+    return json;
+  }
+
+  DistributionInspectResponse copyWith(
+      {DistributionInspectResponseDescriptor? descriptor,
+      List<DistributionInspectResponsePlatformsItem>? platforms}) {
+    return DistributionInspectResponse(
+      descriptor: descriptor ?? this.descriptor,
+      platforms: platforms ?? this.platforms,
+    );
+  }
+}
+
+/// A descriptor struct containing digest, media type, and size.
+class DistributionInspectResponseDescriptor {
+  final String? mediaType;
+  final int? size;
+  final String? digest;
+  final List<String> urLs;
+
+  DistributionInspectResponseDescriptor(
+      {this.mediaType, this.size, this.digest, List<String>? urLs})
+      : urLs = urLs ?? [];
+
+  factory DistributionInspectResponseDescriptor.fromJson(
+      Map<String, Object?> json) {
+    return DistributionInspectResponseDescriptor(
+      mediaType: json[r'MediaType'] as String?,
+      size: (json[r'Size'] as num?)?.toInt(),
+      digest: json[r'Digest'] as String?,
+      urLs: (json[r'URLs'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var mediaType = this.mediaType;
+    var size = this.size;
+    var digest = this.digest;
+    var urLs = this.urLs;
+
+    final json = <String, Object?>{};
+    if (mediaType != null) {
+      json[r'MediaType'] = mediaType;
+    }
+    if (size != null) {
+      json[r'Size'] = size;
+    }
+    if (digest != null) {
+      json[r'Digest'] = digest;
+    }
+    json[r'URLs'] = urLs;
+    return json;
+  }
+
+  DistributionInspectResponseDescriptor copyWith(
+      {String? mediaType, int? size, String? digest, List<String>? urLs}) {
+    return DistributionInspectResponseDescriptor(
+      mediaType: mediaType ?? this.mediaType,
+      size: size ?? this.size,
+      digest: digest ?? this.digest,
+      urLs: urLs ?? this.urLs,
+    );
+  }
+}
+
+class DistributionInspectResponsePlatformsItem {
+  final String? architecture;
+  final String? os;
+  final String? osVersion;
+  final List<String> osFeatures;
+  final String? variant;
+  final List<String> features;
+
+  DistributionInspectResponsePlatformsItem(
+      {this.architecture,
+      this.os,
+      this.osVersion,
+      List<String>? osFeatures,
+      this.variant,
+      List<String>? features})
+      : osFeatures = osFeatures ?? [],
+        features = features ?? [];
+
+  factory DistributionInspectResponsePlatformsItem.fromJson(
+      Map<String, Object?> json) {
+    return DistributionInspectResponsePlatformsItem(
+      architecture: json[r'Architecture'] as String?,
+      os: json[r'OS'] as String?,
+      osVersion: json[r'OSVersion'] as String?,
+      osFeatures: (json[r'OSFeatures'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+      variant: json[r'Variant'] as String?,
+      features: (json[r'Features'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var architecture = this.architecture;
+    var os = this.os;
+    var osVersion = this.osVersion;
+    var osFeatures = this.osFeatures;
+    var variant = this.variant;
+    var features = this.features;
+
+    final json = <String, Object?>{};
+    if (architecture != null) {
+      json[r'Architecture'] = architecture;
+    }
+    if (os != null) {
+      json[r'OS'] = os;
+    }
+    if (osVersion != null) {
+      json[r'OSVersion'] = osVersion;
+    }
+    json[r'OSFeatures'] = osFeatures;
+    if (variant != null) {
+      json[r'Variant'] = variant;
+    }
+    json[r'Features'] = features;
+    return json;
+  }
+
+  DistributionInspectResponsePlatformsItem copyWith(
+      {String? architecture,
+      String? os,
+      String? osVersion,
+      List<String>? osFeatures,
+      String? variant,
+      List<String>? features}) {
+    return DistributionInspectResponsePlatformsItem(
+      architecture: architecture ?? this.architecture,
+      os: os ?? this.os,
+      osVersion: osVersion ?? this.osVersion,
+      osFeatures: osFeatures ?? this.osFeatures,
+      variant: variant ?? this.variant,
+      features: features ?? this.features,
     );
   }
 }
@@ -4126,6 +5010,126 @@ class ErrorResponse {
   }
 }
 
+class ExecInspectResponse {
+  final bool canRemove;
+  final String? detachKeys;
+  final String? id;
+  final bool running;
+  final int? exitCode;
+  final ProcessConfig? processConfig;
+  final bool openStdin;
+  final bool openStderr;
+  final bool openStdout;
+  final String? containerId;
+
+  /// The system process ID for the exec process.
+  final int? pid;
+
+  ExecInspectResponse(
+      {bool? canRemove,
+      this.detachKeys,
+      this.id,
+      bool? running,
+      this.exitCode,
+      this.processConfig,
+      bool? openStdin,
+      bool? openStderr,
+      bool? openStdout,
+      this.containerId,
+      this.pid})
+      : canRemove = canRemove ?? false,
+        running = running ?? false,
+        openStdin = openStdin ?? false,
+        openStderr = openStderr ?? false,
+        openStdout = openStdout ?? false;
+
+  factory ExecInspectResponse.fromJson(Map<String, Object?> json) {
+    return ExecInspectResponse(
+      canRemove: json[r'CanRemove'] as bool? ?? false,
+      detachKeys: json[r'DetachKeys'] as String?,
+      id: json[r'ID'] as String?,
+      running: json[r'Running'] as bool? ?? false,
+      exitCode: (json[r'ExitCode'] as num?)?.toInt(),
+      processConfig: json[r'ProcessConfig'] != null
+          ? ProcessConfig.fromJson(
+              json[r'ProcessConfig']! as Map<String, Object?>)
+          : null,
+      openStdin: json[r'OpenStdin'] as bool? ?? false,
+      openStderr: json[r'OpenStderr'] as bool? ?? false,
+      openStdout: json[r'OpenStdout'] as bool? ?? false,
+      containerId: json[r'ContainerID'] as String?,
+      pid: (json[r'Pid'] as num?)?.toInt(),
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var canRemove = this.canRemove;
+    var detachKeys = this.detachKeys;
+    var id = this.id;
+    var running = this.running;
+    var exitCode = this.exitCode;
+    var processConfig = this.processConfig;
+    var openStdin = this.openStdin;
+    var openStderr = this.openStderr;
+    var openStdout = this.openStdout;
+    var containerId = this.containerId;
+    var pid = this.pid;
+
+    final json = <String, Object?>{};
+    json[r'CanRemove'] = canRemove;
+    if (detachKeys != null) {
+      json[r'DetachKeys'] = detachKeys;
+    }
+    if (id != null) {
+      json[r'ID'] = id;
+    }
+    json[r'Running'] = running;
+    if (exitCode != null) {
+      json[r'ExitCode'] = exitCode;
+    }
+    if (processConfig != null) {
+      json[r'ProcessConfig'] = processConfig.toJson();
+    }
+    json[r'OpenStdin'] = openStdin;
+    json[r'OpenStderr'] = openStderr;
+    json[r'OpenStdout'] = openStdout;
+    if (containerId != null) {
+      json[r'ContainerID'] = containerId;
+    }
+    if (pid != null) {
+      json[r'Pid'] = pid;
+    }
+    return json;
+  }
+
+  ExecInspectResponse copyWith(
+      {bool? canRemove,
+      String? detachKeys,
+      String? id,
+      bool? running,
+      int? exitCode,
+      ProcessConfig? processConfig,
+      bool? openStdin,
+      bool? openStderr,
+      bool? openStdout,
+      String? containerId,
+      int? pid}) {
+    return ExecInspectResponse(
+      canRemove: canRemove ?? this.canRemove,
+      detachKeys: detachKeys ?? this.detachKeys,
+      id: id ?? this.id,
+      running: running ?? this.running,
+      exitCode: exitCode ?? this.exitCode,
+      processConfig: processConfig ?? this.processConfig,
+      openStdin: openStdin ?? this.openStdin,
+      openStderr: openStderr ?? this.openStderr,
+      openStdout: openStdout ?? this.openStdout,
+      containerId: containerId ?? this.containerId,
+      pid: pid ?? this.pid,
+    );
+  }
+}
+
 class GenericResources {
   final GenericResourcesNamedResourceSpec? namedResourceSpec;
   final GenericResourcesDiscreteResourceSpec? discreteResourceSpec;
@@ -4514,6 +5518,73 @@ class HealthcheckResult {
   }
 }
 
+/// individual image layer information in response to ImageHistory operation
+class HistoryResponseItem {
+  final String id;
+  final int created;
+  final String createdBy;
+  final List<String> tags;
+  final int size;
+  final String comment;
+
+  HistoryResponseItem(
+      {required this.id,
+      required this.created,
+      required this.createdBy,
+      required this.tags,
+      required this.size,
+      required this.comment});
+
+  factory HistoryResponseItem.fromJson(Map<String, Object?> json) {
+    return HistoryResponseItem(
+      id: json[r'Id'] as String? ?? '',
+      created: (json[r'Created'] as num?)?.toInt() ?? 0,
+      createdBy: json[r'CreatedBy'] as String? ?? '',
+      tags: (json[r'Tags'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+      size: (json[r'Size'] as num?)?.toInt() ?? 0,
+      comment: json[r'Comment'] as String? ?? '',
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var id = this.id;
+    var created = this.created;
+    var createdBy = this.createdBy;
+    var tags = this.tags;
+    var size = this.size;
+    var comment = this.comment;
+
+    final json = <String, Object?>{};
+    json[r'Id'] = id;
+    json[r'Created'] = created;
+    json[r'CreatedBy'] = createdBy;
+    json[r'Tags'] = tags;
+    json[r'Size'] = size;
+    json[r'Comment'] = comment;
+    return json;
+  }
+
+  HistoryResponseItem copyWith(
+      {String? id,
+      int? created,
+      String? createdBy,
+      List<String>? tags,
+      int? size,
+      String? comment}) {
+    return HistoryResponseItem(
+      id: id ?? this.id,
+      created: created ?? this.created,
+      createdBy: createdBy ?? this.createdBy,
+      tags: tags ?? this.tags,
+      size: size ?? this.size,
+      comment: comment ?? this.comment,
+    );
+  }
+}
+
 /// Container configuration that depends on the host we are running on
 class HostConfig {
   HostConfig();
@@ -4887,6 +5958,49 @@ class ImageMetadata {
   }
 }
 
+class ImagePruneResponse {
+  /// Images that were deleted
+  final List<ImageDeleteResponseItem> imagesDeleted;
+
+  /// Disk space reclaimed in bytes
+  final int? spaceReclaimed;
+
+  ImagePruneResponse(
+      {List<ImageDeleteResponseItem>? imagesDeleted, this.spaceReclaimed})
+      : imagesDeleted = imagesDeleted ?? [];
+
+  factory ImagePruneResponse.fromJson(Map<String, Object?> json) {
+    return ImagePruneResponse(
+      imagesDeleted: (json[r'ImagesDeleted'] as List<Object?>?)
+              ?.map((i) => ImageDeleteResponseItem.fromJson(
+                  i as Map<String, Object?>? ?? const {}))
+              .toList() ??
+          [],
+      spaceReclaimed: (json[r'SpaceReclaimed'] as num?)?.toInt(),
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var imagesDeleted = this.imagesDeleted;
+    var spaceReclaimed = this.spaceReclaimed;
+
+    final json = <String, Object?>{};
+    json[r'ImagesDeleted'] = imagesDeleted.map((i) => i.toJson()).toList();
+    if (spaceReclaimed != null) {
+      json[r'SpaceReclaimed'] = spaceReclaimed;
+    }
+    return json;
+  }
+
+  ImagePruneResponse copyWith(
+      {List<ImageDeleteResponseItem>? imagesDeleted, int? spaceReclaimed}) {
+    return ImagePruneResponse(
+      imagesDeleted: imagesDeleted ?? this.imagesDeleted,
+      spaceReclaimed: spaceReclaimed ?? this.spaceReclaimed,
+    );
+  }
+}
+
 class ImageRootFS {
   final String type;
   final List<String> layers;
@@ -4926,6 +6040,70 @@ class ImageRootFS {
       type: type ?? this.type,
       layers: layers ?? this.layers,
       baseLayer: baseLayer ?? this.baseLayer,
+    );
+  }
+}
+
+class ImageSearchResponseItem {
+  final String? description;
+  final bool isOfficial;
+  final bool isAutomated;
+  final String? name;
+  final int? starCount;
+
+  ImageSearchResponseItem(
+      {this.description,
+      bool? isOfficial,
+      bool? isAutomated,
+      this.name,
+      this.starCount})
+      : isOfficial = isOfficial ?? false,
+        isAutomated = isAutomated ?? false;
+
+  factory ImageSearchResponseItem.fromJson(Map<String, Object?> json) {
+    return ImageSearchResponseItem(
+      description: json[r'description'] as String?,
+      isOfficial: json[r'is_official'] as bool? ?? false,
+      isAutomated: json[r'is_automated'] as bool? ?? false,
+      name: json[r'name'] as String?,
+      starCount: (json[r'star_count'] as num?)?.toInt(),
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var description = this.description;
+    var isOfficial = this.isOfficial;
+    var isAutomated = this.isAutomated;
+    var name = this.name;
+    var starCount = this.starCount;
+
+    final json = <String, Object?>{};
+    if (description != null) {
+      json[r'description'] = description;
+    }
+    json[r'is_official'] = isOfficial;
+    json[r'is_automated'] = isAutomated;
+    if (name != null) {
+      json[r'name'] = name;
+    }
+    if (starCount != null) {
+      json[r'star_count'] = starCount;
+    }
+    return json;
+  }
+
+  ImageSearchResponseItem copyWith(
+      {String? description,
+      bool? isOfficial,
+      bool? isAutomated,
+      String? name,
+      int? starCount}) {
+    return ImageSearchResponseItem(
+      description: description ?? this.description,
+      isOfficial: isOfficial ?? this.isOfficial,
+      isAutomated: isAutomated ?? this.isAutomated,
+      name: name ?? this.name,
+      starCount: starCount ?? this.starCount,
     );
   }
 }
@@ -5936,6 +7114,73 @@ class NetworkContainer {
       macAddress: macAddress ?? this.macAddress,
       iPv4Address: iPv4Address ?? this.iPv4Address,
       iPv6Address: iPv6Address ?? this.iPv6Address,
+    );
+  }
+}
+
+class NetworkCreateResponse {
+  /// The ID of the created network.
+  final String? id;
+  final String? warning;
+
+  NetworkCreateResponse({this.id, this.warning});
+
+  factory NetworkCreateResponse.fromJson(Map<String, Object?> json) {
+    return NetworkCreateResponse(
+      id: json[r'Id'] as String?,
+      warning: json[r'Warning'] as String?,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var id = this.id;
+    var warning = this.warning;
+
+    final json = <String, Object?>{};
+    if (id != null) {
+      json[r'Id'] = id;
+    }
+    if (warning != null) {
+      json[r'Warning'] = warning;
+    }
+    return json;
+  }
+
+  NetworkCreateResponse copyWith({String? id, String? warning}) {
+    return NetworkCreateResponse(
+      id: id ?? this.id,
+      warning: warning ?? this.warning,
+    );
+  }
+}
+
+class NetworkPruneResponse {
+  /// Networks that were deleted
+  final List<String> networksDeleted;
+
+  NetworkPruneResponse({List<String>? networksDeleted})
+      : networksDeleted = networksDeleted ?? [];
+
+  factory NetworkPruneResponse.fromJson(Map<String, Object?> json) {
+    return NetworkPruneResponse(
+      networksDeleted: (json[r'NetworksDeleted'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var networksDeleted = this.networksDeleted;
+
+    final json = <String, Object?>{};
+    json[r'NetworksDeleted'] = networksDeleted;
+    return json;
+  }
+
+  NetworkPruneResponse copyWith({List<String>? networksDeleted}) {
+    return NetworkPruneResponse(
+      networksDeleted: networksDeleted ?? this.networksDeleted,
     );
   }
 }
@@ -7469,6 +8714,53 @@ class PluginMount {
       destination: destination ?? this.destination,
       type: type ?? this.type,
       options: options ?? this.options,
+    );
+  }
+}
+
+/// Describes a permission the user has to accept upon installing
+/// the plugin.
+class PluginPrivilegeItem {
+  final String? name;
+  final String? description;
+  final List<String> value;
+
+  PluginPrivilegeItem({this.name, this.description, List<String>? value})
+      : value = value ?? [];
+
+  factory PluginPrivilegeItem.fromJson(Map<String, Object?> json) {
+    return PluginPrivilegeItem(
+      name: json[r'Name'] as String?,
+      description: json[r'Description'] as String?,
+      value: (json[r'Value'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var name = this.name;
+    var description = this.description;
+    var value = this.value;
+
+    final json = <String, Object?>{};
+    if (name != null) {
+      json[r'Name'] = name;
+    }
+    if (description != null) {
+      json[r'Description'] = description;
+    }
+    json[r'Value'] = value;
+    return json;
+  }
+
+  PluginPrivilegeItem copyWith(
+      {String? name, String? description, List<String>? value}) {
+    return PluginPrivilegeItem(
+      name: name ?? this.name,
+      description: description ?? this.description,
+      value: value ?? this.value,
     );
   }
 }
@@ -9061,6 +10353,44 @@ class Service {
   }
 }
 
+class ServiceCreateResponse {
+  /// The ID of the created service.
+  final String? id;
+
+  /// Optional warning message
+  final String? warning;
+
+  ServiceCreateResponse({this.id, this.warning});
+
+  factory ServiceCreateResponse.fromJson(Map<String, Object?> json) {
+    return ServiceCreateResponse(
+      id: json[r'ID'] as String?,
+      warning: json[r'Warning'] as String?,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var id = this.id;
+    var warning = this.warning;
+
+    final json = <String, Object?>{};
+    if (id != null) {
+      json[r'ID'] = id;
+    }
+    if (warning != null) {
+      json[r'Warning'] = warning;
+    }
+    return json;
+  }
+
+  ServiceCreateResponse copyWith({String? id, String? warning}) {
+    return ServiceCreateResponse(
+      id: id ?? this.id,
+      warning: warning ?? this.warning,
+    );
+  }
+}
+
 class ServiceEndpoint {
   final EndpointSpec? spec;
   final List<EndpointPortConfig> ports;
@@ -10616,6 +11946,236 @@ class SwarmSpecTaskDefaultsLogDriver {
     return SwarmSpecTaskDefaultsLogDriver(
       name: name ?? this.name,
       options: options ?? this.options,
+    );
+  }
+}
+
+class SystemAuthResponse {
+  /// The status of the authentication
+  final String status;
+
+  /// An opaque token used to authenticate a user after a successful login
+  final String? identityToken;
+
+  SystemAuthResponse({required this.status, this.identityToken});
+
+  factory SystemAuthResponse.fromJson(Map<String, Object?> json) {
+    return SystemAuthResponse(
+      status: json[r'Status'] as String? ?? '',
+      identityToken: json[r'IdentityToken'] as String?,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var status = this.status;
+    var identityToken = this.identityToken;
+
+    final json = <String, Object?>{};
+    json[r'Status'] = status;
+    if (identityToken != null) {
+      json[r'IdentityToken'] = identityToken;
+    }
+    return json;
+  }
+
+  SystemAuthResponse copyWith({String? status, String? identityToken}) {
+    return SystemAuthResponse(
+      status: status ?? this.status,
+      identityToken: identityToken ?? this.identityToken,
+    );
+  }
+}
+
+class SystemDataUsageResponse {
+  final int? layersSize;
+  final List<ImageSummary> images;
+  final List<List<ContainerSummary>> containers;
+  final List<Volume> volumes;
+  final List<BuildCache> buildCache;
+
+  SystemDataUsageResponse(
+      {this.layersSize,
+      List<ImageSummary>? images,
+      List<List<ContainerSummary>>? containers,
+      List<Volume>? volumes,
+      List<BuildCache>? buildCache})
+      : images = images ?? [],
+        containers = containers ?? [],
+        volumes = volumes ?? [],
+        buildCache = buildCache ?? [];
+
+  factory SystemDataUsageResponse.fromJson(Map<String, Object?> json) {
+    return SystemDataUsageResponse(
+      layersSize: (json[r'LayersSize'] as num?)?.toInt(),
+      images: (json[r'Images'] as List<Object?>?)
+              ?.map((i) =>
+                  ImageSummary.fromJson(i as Map<String, Object?>? ?? const {}))
+              .toList() ??
+          [],
+      containers: (json[r'Containers'] as List<Object?>?)
+              ?.map((i) =>
+                  (i as List<Object?>?)
+                      ?.map((i) => ContainerSummary.fromJson(
+                          i as Map<String, Object?>? ?? const {}))
+                      .toList() ??
+                  [])
+              .toList() ??
+          [],
+      volumes: (json[r'Volumes'] as List<Object?>?)
+              ?.map((i) =>
+                  Volume.fromJson(i as Map<String, Object?>? ?? const {}))
+              .toList() ??
+          [],
+      buildCache: (json[r'BuildCache'] as List<Object?>?)
+              ?.map((i) =>
+                  BuildCache.fromJson(i as Map<String, Object?>? ?? const {}))
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var layersSize = this.layersSize;
+    var images = this.images;
+    var containers = this.containers;
+    var volumes = this.volumes;
+    var buildCache = this.buildCache;
+
+    final json = <String, Object?>{};
+    if (layersSize != null) {
+      json[r'LayersSize'] = layersSize;
+    }
+    json[r'Images'] = images.map((i) => i.toJson()).toList();
+    json[r'Containers'] =
+        containers.map((i) => i.map((i) => i.toJson()).toList()).toList();
+    json[r'Volumes'] = volumes.map((i) => i.toJson()).toList();
+    json[r'BuildCache'] = buildCache.map((i) => i.toJson()).toList();
+    return json;
+  }
+
+  SystemDataUsageResponse copyWith(
+      {int? layersSize,
+      List<ImageSummary>? images,
+      List<List<ContainerSummary>>? containers,
+      List<Volume>? volumes,
+      List<BuildCache>? buildCache}) {
+    return SystemDataUsageResponse(
+      layersSize: layersSize ?? this.layersSize,
+      images: images ?? this.images,
+      containers: containers ?? this.containers,
+      volumes: volumes ?? this.volumes,
+      buildCache: buildCache ?? this.buildCache,
+    );
+  }
+}
+
+class SystemEventsResponse {
+  /// The type of object emitting the event
+  final String? type;
+
+  /// The type of event
+  final String? action;
+  final SystemEventsResponseActor? actor;
+
+  /// Timestamp of event
+  final int? time;
+
+  /// Timestamp of event, with nanosecond accuracy
+  final int? timeNano;
+
+  SystemEventsResponse(
+      {this.type, this.action, this.actor, this.time, this.timeNano});
+
+  factory SystemEventsResponse.fromJson(Map<String, Object?> json) {
+    return SystemEventsResponse(
+      type: json[r'Type'] as String?,
+      action: json[r'Action'] as String?,
+      actor: json[r'Actor'] != null
+          ? SystemEventsResponseActor.fromJson(
+              json[r'Actor']! as Map<String, Object?>)
+          : null,
+      time: (json[r'time'] as num?)?.toInt(),
+      timeNano: (json[r'timeNano'] as num?)?.toInt(),
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var type = this.type;
+    var action = this.action;
+    var actor = this.actor;
+    var time = this.time;
+    var timeNano = this.timeNano;
+
+    final json = <String, Object?>{};
+    if (type != null) {
+      json[r'Type'] = type;
+    }
+    if (action != null) {
+      json[r'Action'] = action;
+    }
+    if (actor != null) {
+      json[r'Actor'] = actor.toJson();
+    }
+    if (time != null) {
+      json[r'time'] = time;
+    }
+    if (timeNano != null) {
+      json[r'timeNano'] = timeNano;
+    }
+    return json;
+  }
+
+  SystemEventsResponse copyWith(
+      {String? type,
+      String? action,
+      SystemEventsResponseActor? actor,
+      int? time,
+      int? timeNano}) {
+    return SystemEventsResponse(
+      type: type ?? this.type,
+      action: action ?? this.action,
+      actor: actor ?? this.actor,
+      time: time ?? this.time,
+      timeNano: timeNano ?? this.timeNano,
+    );
+  }
+}
+
+class SystemEventsResponseActor {
+  /// The ID of the object emitting the event
+  final String? id;
+
+  /// Various key/value attributes of the object, depending on its type
+  final Map<String, dynamic>? attributes;
+
+  SystemEventsResponseActor({this.id, this.attributes});
+
+  factory SystemEventsResponseActor.fromJson(Map<String, Object?> json) {
+    return SystemEventsResponseActor(
+      id: json[r'ID'] as String?,
+      attributes: json[r'Attributes'] as Map<String, Object?>?,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var id = this.id;
+    var attributes = this.attributes;
+
+    final json = <String, Object?>{};
+    if (id != null) {
+      json[r'ID'] = id;
+    }
+    if (attributes != null) {
+      json[r'Attributes'] = attributes;
+    }
+    return json;
+  }
+
+  SystemEventsResponseActor copyWith(
+      {String? id, Map<String, dynamic>? attributes}) {
+    return SystemEventsResponseActor(
+      id: id ?? this.id,
+      attributes: attributes ?? this.attributes,
     );
   }
 }
@@ -13890,6 +15450,35 @@ class ThrottleDevice {
   }
 }
 
+class UnlockKeyResponse {
+  /// The swarm's unlock key.
+  final String? unlockKey;
+
+  UnlockKeyResponse({this.unlockKey});
+
+  factory UnlockKeyResponse.fromJson(Map<String, Object?> json) {
+    return UnlockKeyResponse(
+      unlockKey: json[r'UnlockKey'] as String?,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var unlockKey = this.unlockKey;
+
+    final json = <String, Object?>{};
+    if (unlockKey != null) {
+      json[r'UnlockKey'] = unlockKey;
+    }
+    return json;
+  }
+
+  UnlockKeyResponse copyWith({String? unlockKey}) {
+    return UnlockKeyResponse(
+      unlockKey: unlockKey ?? this.unlockKey,
+    );
+  }
+}
+
 class Volume {
   /// Name of the volume.
   final String name;
@@ -14027,6 +15616,151 @@ class VolumeScope {
 
   @override
   String toString() => value;
+}
+
+/// Volume configuration
+class VolumeConfig {
+  /// The new volume's name. If not specified, Docker generates a name.
+  final String? name;
+
+  /// Name of the volume driver to use.
+  final String? driver;
+
+  /// A mapping of driver options and values. These options are
+  /// passed directly to the driver and are driver specific.
+  final Map<String, dynamic>? driverOpts;
+
+  /// User-defined key/value metadata.
+  final Map<String, dynamic>? labels;
+
+  VolumeConfig({this.name, this.driver, this.driverOpts, this.labels});
+
+  factory VolumeConfig.fromJson(Map<String, Object?> json) {
+    return VolumeConfig(
+      name: json[r'Name'] as String?,
+      driver: json[r'Driver'] as String?,
+      driverOpts: json[r'DriverOpts'] as Map<String, Object?>?,
+      labels: json[r'Labels'] as Map<String, Object?>?,
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var name = this.name;
+    var driver = this.driver;
+    var driverOpts = this.driverOpts;
+    var labels = this.labels;
+
+    final json = <String, Object?>{};
+    if (name != null) {
+      json[r'Name'] = name;
+    }
+    if (driver != null) {
+      json[r'Driver'] = driver;
+    }
+    if (driverOpts != null) {
+      json[r'DriverOpts'] = driverOpts;
+    }
+    if (labels != null) {
+      json[r'Labels'] = labels;
+    }
+    return json;
+  }
+
+  VolumeConfig copyWith(
+      {String? name,
+      String? driver,
+      Map<String, dynamic>? driverOpts,
+      Map<String, dynamic>? labels}) {
+    return VolumeConfig(
+      name: name ?? this.name,
+      driver: driver ?? this.driver,
+      driverOpts: driverOpts ?? this.driverOpts,
+      labels: labels ?? this.labels,
+    );
+  }
+}
+
+/// Volume list response
+class VolumeListResponse {
+  /// List of volumes
+  final List<Volume> volumes;
+
+  /// Warnings that occurred when fetching the list of volumes.
+  final List<String> warnings;
+
+  VolumeListResponse({required this.volumes, required this.warnings});
+
+  factory VolumeListResponse.fromJson(Map<String, Object?> json) {
+    return VolumeListResponse(
+      volumes: (json[r'Volumes'] as List<Object?>?)
+              ?.map((i) =>
+                  Volume.fromJson(i as Map<String, Object?>? ?? const {}))
+              .toList() ??
+          [],
+      warnings: (json[r'Warnings'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var volumes = this.volumes;
+    var warnings = this.warnings;
+
+    final json = <String, Object?>{};
+    json[r'Volumes'] = volumes.map((i) => i.toJson()).toList();
+    json[r'Warnings'] = warnings;
+    return json;
+  }
+
+  VolumeListResponse copyWith({List<Volume>? volumes, List<String>? warnings}) {
+    return VolumeListResponse(
+      volumes: volumes ?? this.volumes,
+      warnings: warnings ?? this.warnings,
+    );
+  }
+}
+
+class VolumePruneResponse {
+  /// Volumes that were deleted
+  final List<String> volumesDeleted;
+
+  /// Disk space reclaimed in bytes
+  final int? spaceReclaimed;
+
+  VolumePruneResponse({List<String>? volumesDeleted, this.spaceReclaimed})
+      : volumesDeleted = volumesDeleted ?? [];
+
+  factory VolumePruneResponse.fromJson(Map<String, Object?> json) {
+    return VolumePruneResponse(
+      volumesDeleted: (json[r'VolumesDeleted'] as List<Object?>?)
+              ?.map((i) => i as String? ?? '')
+              .toList() ??
+          [],
+      spaceReclaimed: (json[r'SpaceReclaimed'] as num?)?.toInt(),
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    var volumesDeleted = this.volumesDeleted;
+    var spaceReclaimed = this.spaceReclaimed;
+
+    final json = <String, Object?>{};
+    json[r'VolumesDeleted'] = volumesDeleted;
+    if (spaceReclaimed != null) {
+      json[r'SpaceReclaimed'] = spaceReclaimed;
+    }
+    return json;
+  }
+
+  VolumePruneResponse copyWith(
+      {List<String>? volumesDeleted, int? spaceReclaimed}) {
+    return VolumePruneResponse(
+      volumesDeleted: volumesDeleted ?? this.volumesDeleted,
+      spaceReclaimed: spaceReclaimed ?? this.spaceReclaimed,
+    );
+  }
 }
 
 /// Usage details about the volume. This information is used by the
