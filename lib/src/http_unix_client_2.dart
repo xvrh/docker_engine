@@ -4,16 +4,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 import 'package:http/http.dart';
-
-enum _HttpParserState {
-  status,
-  header,
-  content,
-  chunkHeader,
-  chunk,
-  chunkTrailer
-}
-
+/*
 class _HttpRequest {
   var httpVersion = '';
   var statusCode = 0;
@@ -35,7 +26,7 @@ class _HttpRequest {
   }
 }
 
-class HttpUnixClient {
+class HttpUnixClient2 {
   /// Unix socket path.
   final String path;
 
@@ -48,12 +39,11 @@ class HttpUnixClient {
   // Data read from the socket.
   final _buffer = <int>[];
 
-  var _parserState = _HttpParserState.status;
   int? _chunkLength;
   int _chunkRead = 0;
 
   /// Creates a new HTTP client that communicates on a Unix domain socket on [path].
-  HttpUnixClient(this.path);
+  HttpUnixClient2(this.path);
 
   Future<StreamedResponse> send(BaseRequest request) async {
     if (_socket == null) {
@@ -99,7 +89,6 @@ class HttpUnixClient {
   void _processData(Uint8List data) {
     _buffer.addAll(data);
 
-    var done = false;
     while (!done) {
       if (_requests.isEmpty) {
         return;
@@ -257,3 +246,4 @@ class HttpUnixClient {
     return null;
   }
 }
+*/
